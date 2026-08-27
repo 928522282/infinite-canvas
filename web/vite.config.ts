@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { sites } from "@openai/sites-vite-plugin";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 
@@ -38,16 +39,36 @@ function localPluginsManifest(): Plugin {
     };
 }
 
-export default defineConfig({
-    base: process.env.VITE_BASE || "/",
-    plugins: [react(), localPluginsManifest()],
-    resolve: {
-        alias: {
-            "@": resolve(webDir, "src"),
+export default defineConfig(async () => {
+    const { cloudflare } = await import("@cloudflare/vite-plugin");
+
+    return {
+        base: process.env.VITE_BASE || "/",
+        plugins: [
+            react(),
+            localPluginsManifest(),
+            sites(),
+            cloudflare({
+                viteEnvironment: { name: "server" },
+                config: {
+                    name: "infinite-canvas-workbench",
+                    main: "./worker.ts",
+                    compatibility_date: "2026-05-22",
+                    assets: {
+                        binding: "ASSETS",
+                        not_found_handling: "single-page-application",
+                    },
+                },
+            }),
+        ],
+        resolve: {
+            alias: {
+                "@": resolve(webDir, "src"),
+            },
         },
-    },
-    define: {
-        __APP_VERSION__: JSON.stringify(localVersion),
-        __APP_RELEASES__: JSON.stringify(parseChangelog(localChangelog)),
-    },
+        define: {
+            __APP_VERSION__: JSON.stringify(localVersion),
+            __APP_RELEASES__: JSON.stringify(parseChangelog(localChangelog)),
+        },
+    };
 });
