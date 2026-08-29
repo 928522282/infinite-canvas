@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { createModelChannel, useConfigStore } from "@/stores/use-config-store";
 import { usePromptSourceScheduler } from "@/hooks/use-prompt-source-scheduler";
+import { clearLegacyPromptCache } from "@/services/api/prompts";
 
 export function ClientRootInit({ children }: { children: ReactNode }) {
     const { message } = App.useApp();
@@ -15,6 +16,10 @@ export function ClientRootInit({ children }: { children: ReactNode }) {
     const openConfigDialog = useConfigStore((state) => state.openConfigDialog);
 
     usePromptSourceScheduler();
+
+    useEffect(() => {
+        void clearLegacyPromptCache().catch(() => undefined);
+    }, []);
 
     useEffect(() => {
         if (handledConfigParams.current) return;

@@ -22,7 +22,7 @@ test("client startup clears only prompt_cache and records success", () => {
 
     assert.match(prompts, /storeName:\s*["']prompt_cache["']/);
     assert.match(prompts, /export function clearLegacyPromptCache/);
-    assert.match(prompts, /promptCacheStore\.clear\(\)/);
+    assert.match(prompts, /promptCacheStore\s*\.\s*clear\(\)/);
     assert.match(prompts, /localStorage\.setItem\(PROMPT_CACHE_CLEANUP_KEY,\s*["']done["']\)/);
     assert.match(clientInit, /clearLegacyPromptCache\(\)\.catch\(\(\) => undefined\)/);
 });

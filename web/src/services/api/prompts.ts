@@ -47,7 +47,22 @@ type SourceCache = PromptSourceStatus & {
 
 const cacheTtlMs = 1000 * 60 * 60;
 const promptCacheStore = localforage.createInstance({ name: "infinite-canvas", storeName: "prompt_cache" });
+const PROMPT_CACHE_CLEANUP_KEY = "infinite-canvas:prompt_cache_cleanup_v1";
 const loadingSources = new Map<string, Promise<PromptSourceRefreshResult>>();
+let promptCacheCleanup: Promise<void> | undefined;
+
+export function clearLegacyPromptCache() {
+    if (window.localStorage.getItem(PROMPT_CACHE_CLEANUP_KEY) === "done") return Promise.resolve();
+    if (!promptCacheCleanup) {
+        promptCacheCleanup = promptCacheStore
+            .clear()
+            .then(() => window.localStorage.setItem(PROMPT_CACHE_CLEANUP_KEY, "done"))
+            .finally(() => {
+                promptCacheCleanup = undefined;
+            });
+    }
+    return promptCacheCleanup;
+}
 
 function enabledSources() {
     return usePromptSourceStore.getState().sources.filter((source) => source.enabled);
