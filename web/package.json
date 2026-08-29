@@ -10,7 +10,8 @@
         "start": "vite preview --host 0.0.0.0 --port 3000",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
-        "test:sites": "node --test tests/sites-build.test.mjs"
+        "test:sites": "node --test tests/sites-build.test.mjs",
+        "test:prompt-cleanup": "node --test tests/prompt-source-cleanup.test.mjs"
     },
     "dependencies": {
         "@ant-design/icons": "^6.1.1",
