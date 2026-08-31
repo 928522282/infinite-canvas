@@ -6,4 +6,5 @@ export const PROMPT_CENTER_SKILL_IDS = new Set([
     "first-frame-shot-reference-prompts",
     "micro-expression-video-generator",
     "optimized-video-shot-prompt-compiler",
+    "sd25-pe",
 ]);

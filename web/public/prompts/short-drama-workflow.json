@@ -124,5 +124,23 @@
     "createdAt": "",
     "updatedAt": "",
     "author": "用户导入 Skill"
+  },
+  {
+    "id": "sd25-pe",
+    "title": "Seedance 2.5 提示词优化器",
+    "promptUrl": "/prompts/skills/sd25-pe/SKILL.md",
+    "description": "把文字、故事和多模态参考编译为可直接提交给 Seedance 2.5 的干净视频 Prompt，覆盖生成、关键帧、分镜、编辑、声音与延长任务。",
+    "coverUrl": "",
+    "referenceImageUrls": [],
+    "tags": [
+      "Seedance 2.5",
+      "视频提示词",
+      "多模态参考",
+      "提示词优化"
+    ],
+    "preview": "读取文字及可选图片、视频、音频参考，锁定主体、素材职责、事件状态和连续关系后输出单一最佳 Seedance 2.5 Prompt。",
+    "createdAt": "",
+    "updatedAt": "",
+    "author": "Seedance"
   }
 ]

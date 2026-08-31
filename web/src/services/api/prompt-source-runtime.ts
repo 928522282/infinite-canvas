@@ -38,30 +38,36 @@ export async function runPromptSource(source: PromptSource, options?: RunOptions
         throw new Error(i18n.t("config.promptSources.runtime.fetchFailed", { name: source.name, error: error instanceof Error ? error.message : String(error) }));
     }
 
-    const items = parseJsonSource(data, source);
+    const items = await parseJsonSource(data, source, options);
     if (source.builtIn && !items.length) throw new Error(i18n.t("config.promptSources.runtime.noPrompts", { name: source.name }));
     return items;
 }
 
-function parseJsonSource(data: unknown, source: PromptSource) {
+async function parseJsonSource(data: unknown, source: PromptSource, options?: RunOptions) {
     if (!Array.isArray(data)) throw new Error(i18n.t("config.promptSources.runtime.invalidRoot", { name: source.name }));
-    return normalizeItems(data, source);
+    return normalizeItems(data, source, options);
 }
 
-function normalizeItems(values: unknown[], source: PromptSource) {
+async function normalizeItems(values: unknown[], source: PromptSource, options?: RunOptions) {
     const seen = new Set<string>();
-    const items: RawPrompt[] = [];
+    const pending: { record: Record<string, unknown>; index: number; title: string }[] = [];
     values.forEach((value, index) => {
         const record = asRecord(value);
         const title = stringValue(record.title).trim();
-        const prompt = stringValue(record.prompt).trim();
-        if (!title || !prompt) return;
+        if (!title) return;
+        pending.push({ record, index, title });
+    });
+    const normalized: RawPrompt[] = [];
+    for (const item of pending) {
+        const { record, index, title } = item;
+        const prompt = await promptBody(record, source, options);
+        if (!prompt) continue;
         const id = stringValue(record.id).trim() || `${source.id}-${leftPad(index + 1)}`;
-        if (seen.has(id)) return;
+        if (seen.has(id)) continue;
         seen.add(id);
         const referenceImageUrls = stringArray(record.referenceImageUrls).map((url) => absoluteUrl(source.url, url));
         const coverUrl = absoluteUrl(source.url, stringValue(record.coverUrl)) || referenceImageUrls[0] || "";
-        items.push({
+        normalized.push({
             id,
             title,
             prompt,
@@ -79,8 +85,18 @@ function normalizeItems(values: unknown[], source: PromptSource) {
             imageSize: optionalString(record.imageSize),
             imageCount: optionalNumber(record.imageCount),
         });
-    });
-    return items;
+    }
+    return normalized;
+}
+
+async function promptBody(record: Record<string, unknown>, source: PromptSource, options?: RunOptions) {
+    const inline = stringValue(record.prompt).trim();
+    if (inline) return inline;
+    const url = absoluteUrl(source.url, stringValue(record.promptUrl));
+    if (!url) return "";
+    const response = await fetch(url, { cache: "no-store", signal: options?.signal });
+    if (!response.ok) throw new Error(i18n.t("config.promptSources.runtime.requestFailed", { status: response.status }));
+    return (await response.text()).trim();
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

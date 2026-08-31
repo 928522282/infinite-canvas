@@ -2,6 +2,7 @@
 
 ## Unreleased
 
++ [新增] 提示词中心加入完整的 `Seedance 2.5 Prompt Optimizer` Skill，并支持从独立 Markdown 资源加载超长 Skill 正文，保证编辑、复制和输入画布时不截断。
 + [新增] 提供“在线网站 + Windows 本地连接器”分发模式，连接器内置独立 Node.js 与 Canvas Agent 运行环境，可从开始菜单后台启动、停止并通过 URL Fragment 安全连接在线画布。
 
 ## v0.17.0 - 2026-08-31

@@ -12,6 +12,7 @@ const promptSkillService = readFileSync(`${webRoot}src/services/api/prompt-skill
 const promptEditDialog = readFileSync(`${webRoot}src/pages/prompts/components/prompt-edit-dialog.tsx`, "utf8");
 const agentSkillsView = readFileSync(`${webRoot}src/components/agent/agent-skills-view.tsx`, "utf8");
 const shortDramaWorkflow = readFileSync(`${webRoot}src/lib/canvas/short-drama-workflow.ts`, "utf8");
+const promptSourceRuntime = readFileSync(`${webRoot}src/services/api/prompt-source-runtime.ts`, "utf8");
 
 test("the Prompt Center can insert an editable prompt copy into a selected canvas", () => {
     assert.match(promptsPage, /useCanvasStore\(\(state\) => state\.projects\)/);
@@ -96,4 +97,17 @@ test("workflow metadata keeps per-VID branch lineage", () => {
     assert.match(canvasTypes, /workflowSourceVidId\?:\s*string/);
     assert.match(canvasTypes, /workflowBranchStatus\?:\s*"pending"\s*\|\s*"running"\s*\|\s*"success"\s*\|\s*"blocked"\s*\|\s*"error"/);
     assert.match(canvasTypes, /workflowEmbeddedSkill\?:\s*CanvasEmbeddedSkill/);
+});
+
+test("long bundled Skills load their complete Markdown body", () => {
+    const source = JSON.parse(readFileSync(`${webRoot}public/prompts/short-drama-workflow.json`, "utf8"));
+    const skill = source.find((item) => item.id === "sd25-pe");
+    const markdown = readFileSync(`${webRoot}public/prompts/skills/sd25-pe/SKILL.md`, "utf8");
+    assert.equal(skill.promptUrl, "/prompts/skills/sd25-pe/SKILL.md");
+    assert.ok(markdown.length > 60_000);
+    assert.match(markdown, /name: sd25-pe/);
+    assert.match(markdown, /# Seedance 2\.5 Prompt Optimizer/);
+    assert.match(markdown, /## 最终自检/);
+    assert.match(promptSourceRuntime, /async function promptBody/);
+    assert.match(promptSourceRuntime, /response\.text\(\)/);
 });
