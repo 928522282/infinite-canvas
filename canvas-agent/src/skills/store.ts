@@ -118,6 +118,32 @@ export class SkillStore {
         });
     }
 
+    /** 从原生 Skill 列表已校验的入口完整复制 Skill 包，保留 scripts、references 与 assets。 */
+    import(nameValue: string, sourceSkillFileValue: string) {
+        return this.mutate(async () => {
+            const name = skillName(nameValue);
+            const sourceSkillFile = path.resolve(sourceSkillFileValue);
+            if (path.basename(sourceSkillFile).toLowerCase() !== "skill.md") throw new SkillStoreError("Skill 入口文件无效", 400);
+            const sourceSkillDir = path.dirname(sourceSkillFile);
+            const sourceDirectory = await lstatOptional(sourceSkillDir);
+            const sourceFile = await lstatOptional(sourceSkillFile);
+            if (!sourceDirectory?.isDirectory() || sourceDirectory.isSymbolicLink() || !sourceFile?.isFile() || sourceFile.isSymbolicLink()) throw new SkillStoreError("Skill 来源目录不安全", 400);
+            await assertTreeHasNoLinks(sourceSkillDir);
+            await readSkill(sourceSkillFile, name);
+            await this.ensureRoot();
+            const skillDir = path.join(this.skillsPath, name);
+            if (await lstatOptional(skillDir)) throw new SkillStoreError("同名 Skill 已存在", 409);
+            try {
+                await fs.cp(sourceSkillDir, skillDir, { recursive: true, errorOnExist: true, force: false });
+                const paths = await this.safeExistingPaths(name);
+                return await this.readDetail(name, paths.skillFile, paths.openAiFile);
+            } catch (error) {
+                await fs.rm(skillDir, { recursive: true, force: true }).catch(() => undefined);
+                throw error;
+            }
+        });
+    }
+
     /** 通过 revision 防止覆盖已被其他窗口或外部编辑器修改的内容。 */
     update(nameValue: string, input: UpdateManagedSkillInput) {
         return this.mutate(async () => {
@@ -286,14 +312,17 @@ function skillInstructions(value: unknown) {
     return instructions;
 }
 
-function skillInterfaceValue(value: unknown, name: string): ManagedSkillInterface | undefined {
+function skillInterfaceValue(value: unknown, name: string, omitLegacyShortDescription = false): ManagedSkillInterface | undefined {
     if (value === undefined || value === null) return undefined;
     if (typeof value !== "object" || Array.isArray(value)) throw new SkillStoreError("Skill 界面元数据无效", 400);
     const interfaceValue = value as Record<string, unknown>;
     const displayName = optionalText(interfaceValue.displayName, "显示名称", MAX_DISPLAY_NAME_LENGTH);
-    const shortDescription = optionalText(interfaceValue.shortDescription, "简短描述", MAX_SHORT_DESCRIPTION_LENGTH);
+    let shortDescription = optionalText(interfaceValue.shortDescription, "简短描述", MAX_SHORT_DESCRIPTION_LENGTH);
     const defaultPrompt = optionalText(interfaceValue.defaultPrompt, "默认提示词", MAX_DEFAULT_PROMPT_LENGTH);
-    if (shortDescription && shortDescription.length < MIN_SHORT_DESCRIPTION_LENGTH) throw new SkillStoreError(`简短描述不能少于 ${MIN_SHORT_DESCRIPTION_LENGTH} 个字符`, 400);
+    if (shortDescription && shortDescription.length < MIN_SHORT_DESCRIPTION_LENGTH) {
+        if (!omitLegacyShortDescription) throw new SkillStoreError(`简短描述不能少于 ${MIN_SHORT_DESCRIPTION_LENGTH} 个字符`, 400);
+        shortDescription = undefined;
+    }
     if (defaultPrompt && !new RegExp(`\\$${name}(?![A-Za-z0-9_-]|:[A-Za-z0-9_-])`).test(defaultPrompt)) throw new SkillStoreError(`默认提示词必须包含 $${name}`, 400);
     return displayName || shortDescription || defaultPrompt ? { ...(displayName ? { displayName } : {}), ...(shortDescription ? { shortDescription } : {}), ...(defaultPrompt ? { defaultPrompt } : {}) } : undefined;
 }
@@ -354,7 +383,7 @@ async function readOpenAi(filePath: string, expectedName: string): Promise<OpenA
         throw new SkillStoreError("agents/openai.yaml interface 格式无效", 409);
     }
     const value = data.interface as Record<string, unknown> | null | undefined;
-    const skillInterface = skillInterfaceValue({ displayName: value?.display_name, shortDescription: value?.short_description, defaultPrompt: value?.default_prompt }, expectedName);
+    const skillInterface = skillInterfaceValue({ displayName: value?.display_name, shortDescription: value?.short_description, defaultPrompt: value?.default_prompt }, expectedName, true);
     return { raw, data, ...(skillInterface ? { interface: skillInterface } : {}) };
 }
 

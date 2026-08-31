@@ -30,6 +30,7 @@ description: Major features available in the current project
 - Connect to user-provided OpenAI-compatible endpoints directly from the browser.
 - Configure multiple channels, fetch or enter model names, and choose default text, image, and video models.
 - Support image count, aspect ratio, quality, transparent backgrounds, reasoning effort, and custom invocation scripts.
+- Support SilkDock asynchronous image generation and reference-image editing, including cancellable task polling and provider-compatible multipart uploads.
 - Support OpenAI-style video endpoints.
 
 ## Canvas Agent
@@ -47,12 +48,22 @@ Canvas plugins can contribute node types, rendering, inspectors, serialization, 
 
 ## Prompts and assets
 
-- Use seven built-in prompt sources from the [Image Prompts](https://github.com/yukkcat/image-prompts) registry, with independent enablement, manual refresh, and scheduled refresh.
+- Use the bundled AI script-conversion, character-asset audit, keyframe-image, first-frame/shot-reference, and MiniMax H3 video-prompt compiler templates for short-drama workflows.
+- Audit character mentions and confirmed image assets before image-prompt generation, producing exact per-unit allowlists and blocking unresolved or mismatched assets.
+- Distinguish the covered bundled short-drama templates with locally served 3:4 realistic art generated through SilkDock.
+- Add and remove Skill cards, move them earlier or later, and persist the chosen workflow order in the browser.
+- Insert the arranged cards as a linear editable canvas workflow. Codex loads and executes each matching Skill in the selected order, while image-prompt Skills invoke SilkDock as their immediate follow-up and preserve intermediate prompts and images.
+- When a workflow starts from an uploaded file or file path, materialize the complete unchanged source in the input node with extraction progress and file, worksheet, page, row, or cell provenance before the first Skill runs. Later steps keep that source visible and unchanged.
+- Expand AI script-conversion results into one canvas group per `SCENE` and one complete text node per `VID`, while the conversion node remains a compact progress summary and index. Downstream Skills consume every VID in source order.
+- Execute every downstream Skill as a separate branch for each `VID`. Each result stores its source node, source VID, scene, Skill, step, and branch status, while direct edges preserve lineage from the original spreadsheet through prompts and generated media. A blocked VID stops only its own branch.
 - Add, edit, and remove custom standard JSON sources while retaining the last successful cache when refresh fails.
 - Search across enabled sources, filter by tags, inspect prompt details, copy prompts, and insert them into the canvas.
+- Edit bundled short-drama Skill titles, descriptions, tags, and instructions only from Prompt Center. The first synchronization clones the complete installed Skill package, including scripts, references, assets, and UI metadata; saving or restoring then updates the revision-checked workspace `SKILL.md` before committing the browser-local card override.
+- Re-synchronize every selected Skill from its current Prompt Center card before inserting a workflow, so the canvas nodes and Codex invocation use the same instructions. The original user-level Skill remains untouched as a fallback.
+- Select a target canvas and create an independent editable text-node copy from any prompt card.
 - Store reusable images, videos, audio, and prompt assets in the browser.
 
-See [Third-party Prompt Sources](/docs/overview/third-party-prompt-repositories) for the complete built-in list.
+See [Third-party Prompt Sources](/docs/overview/third-party-prompt-repositories) for the supported source format.
 
 ## Configuration and synchronization
 

@@ -46,6 +46,7 @@ import { useAgentBridge } from "@/pages/canvas/hooks/use-agent-bridge";
 import { usePluginHost } from "@/pages/canvas/hooks/use-plugin-host";
 import { buildNodeMentionReferences, getGroupResourceNodes, isCanvasReferenceNode, type CanvasResourceReference } from "@/lib/canvas/canvas-resource-references";
 import { exportCanvasProjects } from "@/lib/canvas/canvas-export";
+import { exportVideoWorkflow } from "@/lib/canvas/video-workflow-export";
 import { applyNodeConfigPatch, audioMetadata, buildAudioGenerationMetadata, buildImageGenerationMetadata, createCanvasNode, imageMetadata, videoMetadata } from "@/lib/canvas/canvas-node-factory";
 import { findContainingGroupId, findGroupDropTarget, getConnectionTargetAnchor, normalizeConnection, snapNodesIntoGroup } from "@/lib/canvas/canvas-node-geometry";
 import {
@@ -1031,6 +1032,21 @@ function InfiniteCanvasPage() {
         } catch (error) {
             console.error(error);
             message.error(t("canvas.sidePanel.exportFailed"));
+        } finally {
+            hide();
+        }
+    }, [message, projectId, t]);
+
+    const exportCurrentVideoWorkflow = useCallback(async () => {
+        const project = useCanvasStore.getState().projects.find((item) => item.id === projectId);
+        if (!project) return message.error(t("canvas.projectPage.notFound"));
+        const hide = message.loading(t("canvas.videoWorkflowExport.exporting"), 0);
+        try {
+            const index = await exportVideoWorkflow(project, project.title || t("canvas.title"));
+            message.success(t("canvas.videoWorkflowExport.exported", { count: index.jobs.length }));
+        } catch (error) {
+            console.error(error);
+            message.error(error instanceof Error ? error.message : t("canvas.videoWorkflowExport.failed"));
         } finally {
             hide();
         }
@@ -2930,6 +2946,7 @@ function InfiniteCanvasPage() {
                     onCreateProject={createAndOpenProject}
                     onDeleteProject={deleteCurrentProject}
                     onExportProject={exportCurrentProject}
+                    onExportVideoWorkflow={exportCurrentVideoWorkflow}
                     onImportImage={() => handleUploadRequest()}
                     onOpenPlugins={() => setPluginManagerOpen(true)}
                     onUndo={undoCanvas}

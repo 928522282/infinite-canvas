@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 import i18n from "@/i18n";
 import { localForageStorage } from "@/lib/localforage-storage";
 import type { CanvasBackgroundMode } from "@/lib/canvas-theme";
-import type { CanvasAssistantSession, CanvasConnection, CanvasNodeData, ViewportTransform } from "@/types/canvas";
+import type { CanvasAssistantSession, CanvasConnection, CanvasEmbeddedSkill, CanvasNodeData, ViewportTransform } from "@/types/canvas";
 
 export type CanvasProject = {
     id: string;
@@ -31,6 +31,7 @@ type CanvasStore = {
     deleteProjects: (ids: string[]) => void;
     replaceProjects: (projects: CanvasProject[]) => void;
     updateProject: (id: string, patch: Partial<Pick<CanvasProject, "nodes" | "connections" | "chatSessions" | "activeChatId" | "backgroundMode" | "showImageInfo" | "viewport">>) => void;
+    updateEmbeddedSkill: (skill: CanvasEmbeddedSkill) => void;
 };
 
 const initialViewport: ViewportTransform = { x: 0, y: 0, k: 1 };
@@ -118,6 +119,29 @@ export const useCanvasStore = create<CanvasStore>()(
             updateProject: (id, patch) =>
                 set((state) => ({
                     projects: state.projects.map((project) => (project.id === id ? { ...project, ...patch, updatedAt: new Date().toISOString() } : project)),
+                })),
+            updateEmbeddedSkill: (skill) =>
+                set((state) => ({
+                    projects: state.projects.map((project) => {
+                        let changed = false;
+                        const nodes = project.nodes.map((node) => {
+                            const metadata = node.metadata;
+                            if (!metadata || (metadata.workflowSkill !== skill.id && metadata.workflowSkill !== `${skill.id}-index`) || (metadata.workflowRole !== "skill" && metadata.workflowRole !== "index")) return node;
+                            changed = true;
+                            const executable = metadata.workflowRole === "skill";
+                            return {
+                                ...node,
+                                title: executable && metadata.workflowStep ? `${metadata.workflowStep}. ${skill.title}` : node.title,
+                                metadata: {
+                                    ...metadata,
+                                    ...(executable ? { content: skill.instructions, prompt: skill.instructions } : {}),
+                                    workflowExecutor: "embedded",
+                                    workflowEmbeddedSkill: skill,
+                                },
+                            };
+                        });
+                        return changed ? { ...project, nodes, updatedAt: new Date().toISOString() } : project;
+                    }),
                 })),
         }),
         {

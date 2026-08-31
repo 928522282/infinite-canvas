@@ -2,21 +2,24 @@ import { useEffect, useMemo, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 
 import { ALL_PROMPTS_OPTION, fetchPrompts } from "@/services/api/prompts";
+import { usePromptEditorStore } from "@/stores/use-prompt-editor-store";
 
 export const PROMPT_PAGE_SIZE = 20;
 
 export function usePromptList({ keyword, tags, category, enabled = true }: { keyword: string; tags: string[]; category: string; enabled?: boolean }) {
     const [debouncedKeyword, setDebouncedKeyword] = useState(keyword);
+    const editorHydrated = usePromptEditorStore((state) => state.hydrated);
+    const editorRevision = usePromptEditorStore((state) => state.revision);
     useEffect(() => {
         const timer = setTimeout(() => setDebouncedKeyword(keyword), 300);
         return () => clearTimeout(timer);
     }, [keyword]);
     const query = useInfiniteQuery({
-        queryKey: ["prompts", debouncedKeyword, tags, category],
+        queryKey: ["prompts", editorRevision, debouncedKeyword, tags, category],
         queryFn: ({ pageParam }) => fetchPrompts({ keyword: debouncedKeyword, tag: tags, category, page: pageParam, pageSize: PROMPT_PAGE_SIZE }),
         initialPageParam: 1,
         getNextPageParam: (lastPage, pages) => (pages.reduce((total, page) => total + page.items.length, 0) < lastPage.total ? pages.length + 1 : undefined),
-        enabled,
+        enabled: enabled && editorHydrated,
     });
     const firstPage = query.data?.pages[0];
     return {

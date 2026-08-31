@@ -71,8 +71,9 @@ type ResponseApiPayload = {
 type ResponseStreamState = { buffer: string; text: string; payload?: ResponseApiPayload; error?: string };
 
 type ImageApiResponse = {
-    data?: Array<Record<string, unknown>>;
-    error?: { message?: string };
+    [key: string]: unknown;
+    data?: unknown;
+    error?: { message?: string } | string;
     code?: number;
     msg?: string;
 };
@@ -115,6 +116,9 @@ const IMAGE_MAX_PIXELS = 8294400;
 const IMAGE_MAX_EDGE = 3840;
 const IMAGE_MAX_RATIO = 3;
 const IMAGE_OUTPUT_FORMAT = "png";
+const IMAGE_TASK_POLL_INTERVAL_MS = 5000;
+const IMAGE_TASK_FAILURE_STATES = new Set(["cancelled", "canceled", "failed", "error", "expired"]);
+const IMAGE_TASK_SUCCESS_STATES = new Set(["completed", "complete", "succeeded", "success", "ready"]);
 
 const GEMINI_SUPPORTED_RATIOS = ["1:1", "1:4", "1:8", "2:3", "3:2", "3:4", "4:1", "4:3", "4:5", "5:4", "8:1", "9:16", "16:9", "21:9"];
 const GEMINI_IMAGE_SIZE_BY_QUALITY: Record<string, string> = { low: "1K", medium: "2K", high: "4K", standard: "1K", hd: "2K" };
@@ -234,28 +238,43 @@ function supportsGeminiImageSize(model: string) {
 }
 
 function resolveImageSource(item: Record<string, unknown>) {
-    if (typeof item.b64_json === "string" && item.b64_json) {
-        return `data:image/png;base64,${item.b64_json}`;
+    for (const key of ["b64_json", "base64", "content"]) {
+        const value = item[key];
+        if (typeof value === "string" && value) {
+            return value.startsWith("data:") ? value : `data:image/png;base64,${value}`;
+        }
     }
-    if (typeof item.url === "string" && item.url) {
-        return item.url;
+    for (const key of ["url", "download_url", "output_url", "image_url"]) {
+        const value = item[key];
+        if (typeof value === "string" && value) return value;
     }
     return null;
 }
 
-function parseImagePayload(payload: ImageApiResponse) {
+function collectImageSources(value: unknown, sources = new Set<string>()) {
+    if (Array.isArray(value)) {
+        value.forEach((item) => collectImageSources(item, sources));
+        return sources;
+    }
+    if (!value || typeof value !== "object") return sources;
+    const record = value as Record<string, unknown>;
+    const direct = resolveImageSource(record);
+    if (direct) sources.add(direct);
+    for (const key of ["data", "output", "result", "artifacts", "images", "results"]) {
+        collectImageSources(record[key], sources);
+    }
+    return sources;
+}
+
+function validateImagePayload(payload: ImageApiResponse) {
     if (typeof payload.code === "number" && payload.code !== 0) {
         throw new Error(payload.msg || apiText("requestFailed"));
     }
-    // Support data, images, and results response fields used by different APIs.
-    const imageList = payload.data
-        || (payload as Record<string, unknown>).images as Array<Record<string, unknown>> | undefined
-        || (payload as Record<string, unknown>).results as Array<Record<string, unknown>> | undefined
-        || [];
-    const images = imageList
-        .map(resolveImageSource)
-        .filter((value): value is string => Boolean(value))
-        .map((dataUrl) => ({ id: nanoid(), dataUrl }));
+}
+
+function parseImagePayload(payload: ImageApiResponse) {
+    validateImagePayload(payload);
+    const images = [...collectImageSources(payload)].map((dataUrl) => ({ id: nanoid(), dataUrl }));
 
     if (images.length === 0) {
         // Check whether the response contains data in an unrecognized format.
@@ -266,6 +285,71 @@ function parseImagePayload(payload: ImageApiResponse) {
     }
 
     return images;
+}
+
+function readImageTaskValue(payload: ImageApiResponse, keys: string[]): string {
+    for (const key of keys) {
+        const value = payload[key];
+        if (typeof value === "string" && value) return value;
+    }
+    for (const key of ["data", "result"]) {
+        const nested = payload[key];
+        if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+            const value = readImageTaskValue(nested as ImageApiResponse, keys);
+            if (value) return value;
+        }
+    }
+    return "";
+}
+
+function readImageTaskDelay(payload: ImageApiResponse) {
+    let delayMs = IMAGE_TASK_POLL_INTERVAL_MS;
+    for (const [key, multiplier] of [["retry_after", 1000], ["poll_interval", 1000], ["retry_after_ms", 1]] as const) {
+        const value = Number(payload[key]);
+        if (Number.isFinite(value) && value > 0) delayMs = Math.max(delayMs, value * multiplier);
+    }
+    return delayMs;
+}
+
+function delay(ms: number, signal?: AbortSignal) {
+    return new Promise<void>((resolve, reject) => {
+        if (signal?.aborted) {
+            reject(new DOMException("Aborted", "AbortError"));
+            return;
+        }
+        const abort = () => {
+            clearTimeout(timer);
+            reject(new DOMException("Aborted", "AbortError"));
+        };
+        const timer = setTimeout(() => {
+            signal?.removeEventListener("abort", abort);
+            resolve();
+        }, ms);
+        signal?.addEventListener("abort", abort, { once: true });
+    });
+}
+
+async function resolveImagePayload(config: AiConfig, initial: ImageApiResponse, options?: RequestOptions) {
+    let payload = initial;
+    let taskId = readImageTaskValue(payload, ["id", "job_id", "task_id", "request_id"]);
+    while (true) {
+        validateImagePayload(payload);
+        const images = [...collectImageSources(payload)].map((dataUrl) => ({ id: nanoid(), dataUrl }));
+        if (images.length) return images;
+
+        const status = readImageTaskValue(payload, ["status", "state"]).toLowerCase();
+        if (IMAGE_TASK_FAILURE_STATES.has(status)) throw new Error(readApiErrorMessage(payload) || apiText("requestFailed"));
+        if (IMAGE_TASK_SUCCESS_STATES.has(status)) throw new Error(apiText("noImageReturned"));
+        taskId ||= readImageTaskValue(payload, ["id", "job_id", "task_id", "request_id"]);
+        if (!taskId) return parseImagePayload(payload);
+
+        await delay(readImageTaskDelay(payload), options?.signal);
+        const response = await axios.get<ImageApiResponse>(aiApiUrl(config, `/images/generations/${encodeURIComponent(taskId)}`), {
+            headers: aiHeaders(config),
+            signal: options?.signal,
+        });
+        payload = response.data;
+    }
 }
 
 function readApiErrorMessage(value: unknown): string {
@@ -334,6 +418,15 @@ function withSystemPrompt(config: AiConfig, prompt: string) {
 
 function aiApiUrl(config: AiConfig, path: string) {
     return buildApiUrl(config.baseUrl, path);
+}
+
+function isSilkDockChannel(config: AiConfig) {
+    try {
+        const hostname = new URL(config.baseUrl).hostname.toLowerCase();
+        return hostname === "silkdock.ai" || hostname.endsWith(".silkdock.ai");
+    } catch {
+        return false;
+    }
 }
 
 function aiHeaders(config: AiConfig, contentType?: string) {
@@ -765,7 +858,7 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
                 signal: options?.signal,
             },
         );
-        const images = await parseImagePayload(response.data);
+        const images = await resolveImagePayload(requestConfig, response.data, options);
         return images;
     } catch (error) {
         throw new Error(readAxiosError(error, apiText("requestFailed")));
@@ -828,12 +921,13 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
         formData.set("background", background);
     }
     const files = await Promise.all(references.map(async (image) => dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) })));
-    files.forEach((file) => formData.append("image", file));
+    const imageField = isSilkDockChannel(requestConfig) ? "image[]" : "image";
+    files.forEach((file) => formData.append(imageField, file));
     if (mask) formData.set("mask", dataUrlToFile(mask));
 
     try {
         const response = await axios.post<ImageApiResponse>(aiApiUrl(requestConfig, "/images/edits"), formData, { headers: aiHeaders(requestConfig), signal: options?.signal });
-        const images = await parseImagePayload(response.data);
+        const images = await resolveImagePayload(requestConfig, response.data, options);
         return images;
     } catch (error) {
         throw new Error(readAxiosError(error, apiText("requestFailed")));

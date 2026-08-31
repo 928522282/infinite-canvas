@@ -235,6 +235,17 @@ export function startHttpServer() {
         session.emitAll("skills_changed", { forceReload: true });
         res.json({ ok: true });
     }));
+    app.post("/agent/codex/skills/:name/import", codexMutation(async (req, res) => {
+        const name = routeParam(req.params.name);
+        const selector = skillSelector(req.body);
+        if (selector.name !== name) return res.status(400).json({ ok: false, error: "Skill 选择无效" });
+        const workspace = ensureSiteWorkspace(config);
+        const source = await resolveCodexSkill(emit, workspace.workspacePath, selector, true);
+        if (skillStore.isManagedPath(source.path)) return res.json({ ok: true, data: await skillStore.get(name) });
+        const data = await skillStore.import(name, source.path);
+        session.emitAll("skills_changed", { forceReload: true });
+        res.status(201).json({ ok: true, data });
+    }));
     app.post("/agent/codex/skills/:name", codexMutation(async (req, res) => {
         const data = await skillStore.update(routeParam(req.params.name), req.body);
         session.emitAll("skills_changed", { forceReload: true });

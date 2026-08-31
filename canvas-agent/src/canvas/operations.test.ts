@@ -2,11 +2,19 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { buildCanvasToolRequest } from "./operations.js";
+import { toolInputSchemas } from "./schemas.js";
 
 function opsOf(name: Parameters<typeof buildCanvasToolRequest>[0], input: Record<string, unknown>) {
     const request = buildCanvasToolRequest(name, input, null);
     return (request.input as { ops: Array<Record<string, any>> }).ops;
 }
+
+test("canvas node creation accepts real group nodes", () => {
+    const input = toolInputSchemas.canvas_create_node.parse({ nodeType: "group", title: "SCENE-001", width: 760, height: 560 });
+    const [group] = opsOf("canvas_create_node", input);
+    assert.equal(group.nodeType, "group");
+    assert.equal(group.title, "SCENE-001");
+});
 
 test("generation flow reuses referenced nodes when the prompt only mentions them", () => {
     const ops = opsOf("canvas_generate_image", { prompt: "@[node:text-1]", referenceNodeIds: ["text-1"], title: "Flow", autoRun: true });

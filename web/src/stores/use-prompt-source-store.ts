@@ -45,13 +45,19 @@ export const usePromptSourceStore = create<PromptSourceStore>()(
         }),
         {
             name: PROMPT_SOURCE_STORE_KEY,
-            version: 3,
+            version: 4,
             partialize: (state) => ({ sources: state.sources, schedule: state.schedule }),
-            migrate: (persisted) => ({ ...((persisted || {}) as Partial<PromptSourceStore>), sources: [] }),
+            migrate: (persisted, version) => {
+                const state = (persisted || {}) as Partial<PromptSourceStore>;
+                return version < 3 ? { ...state, sources: [] } : state;
+            },
             merge: (persisted, current) => {
                 const persistedState = (persisted || {}) as Partial<PromptSourceStore>;
-                const sources = Array.isArray(persistedState.sources) ? persistedState.sources.map((source) => createPromptSource(source)) : [];
-                return { ...current, sources, schedule: { ...defaultSchedule, ...(persistedState.schedule || {}) } };
+                const savedSources = Array.isArray(persistedState.sources) ? persistedState.sources : [];
+                const enabledById = new Map(savedSources.map((source) => [source.id, source.enabled]));
+                const builtIn = DEFAULT_PROMPT_SOURCES.map((source) => ({ ...source, enabled: enabledById.get(source.id) ?? source.enabled }));
+                const custom = savedSources.filter((source) => !source.builtIn).map((source) => createPromptSource(source));
+                return { ...current, sources: [...builtIn, ...custom], schedule: { ...defaultSchedule, ...(persistedState.schedule || {}) } };
             },
         },
     ),

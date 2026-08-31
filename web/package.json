@@ -10,8 +10,11 @@
         "start": "vite preview --host 0.0.0.0 --port 3000",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
+        "test:prompt-canvas": "node --test tests/prompt-canvas-input.test.mjs",
+        "test:silkdock-image": "node --test tests/silkdock-image-polling.test.mjs",
         "test:sites": "node --test tests/sites-build.test.mjs",
-        "test:prompt-cleanup": "node --test tests/prompt-source-cleanup.test.mjs"
+        "test:prompt-cleanup": "node --test tests/prompt-source-cleanup.test.mjs",
+        "test:video-workflow-export": "node --test tests/video-workflow-export.test.mjs"
     },
     "dependencies": {
         "@ant-design/icons": "^6.1.1",

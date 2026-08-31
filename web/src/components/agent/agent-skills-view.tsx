@@ -5,6 +5,7 @@ import { Check, ChevronDown, CircleAlert, FilePenLine, LoaderCircle, LockKeyhole
 import { useTranslation } from "react-i18next";
 
 import { canvasThemes } from "@/lib/canvas-theme";
+import { PROMPT_CENTER_SKILL_IDS } from "@/lib/prompt-center-skills";
 import { createCodexSkill, createCodexSkillDraft, deleteCodexSkill, fetchCodexSkill, postState, setCodexSkillEnabled, updateCodexSkill, type AgentSkillDetail, type AgentSkillDraft, type AgentSkillInterface, type AgentSkillScope, type AgentSkillSummary } from "@/services/api/canvas-agent";
 import { useAgentSkillStore } from "@/stores/use-agent-skill-store";
 import { useAgentStore, type AgentChatItem } from "@/stores/use-agent-store";
@@ -312,6 +313,7 @@ export function AgentSkillsView({ clientId }: { clientId: string }) {
                         {filteredSkills.map((skill) => {
                             const selected = selectedSkill?.name === skill.name && selectedSkill.path === skill.path;
                             const busy = busySkill === skill.path;
+                            const promptCenterManaged = skill.managed && PROMPT_CENTER_SKILL_IDS.has(skill.name);
                             return (
                                 <div key={`${skill.name}:${skill.path}`} className={`py-3 transition-opacity ${skill.enabled ? "" : "opacity-55"}`} style={{ borderColor: theme.node.stroke }}>
                                     <div className="flex items-start gap-3">
@@ -319,7 +321,7 @@ export function AgentSkillsView({ clientId }: { clientId: string }) {
                                         <div className="min-w-0 flex-1">
                                             <div className="flex min-w-0 items-center gap-2">
                                                 <span className="truncate text-sm font-medium">{skill.interface?.displayName || skill.name}</span>
-                                                {!skill.managed ? <Tooltip title={t("agent.skillManager.externalReadonly")}><LockKeyhole className="size-3.5 shrink-0" style={{ color: theme.node.faint }} /></Tooltip> : null}
+                                                {!skill.managed || promptCenterManaged ? <Tooltip title={t(promptCenterManaged ? "agent.skillManager.promptCenterManaged" : "agent.skillManager.externalReadonly")}><LockKeyhole className="size-3.5 shrink-0" style={{ color: theme.node.faint }} /></Tooltip> : null}
                                             </div>
                                             <div className="mt-1 line-clamp-2 text-xs leading-5" style={{ color: theme.node.muted }}>{skill.interface?.shortDescription || skill.shortDescription || skill.description || t("agent.skillManager.noDescription")}</div>
                                             <Tooltip title={skill.path}>
@@ -334,7 +336,7 @@ export function AgentSkillsView({ clientId }: { clientId: string }) {
                                         </label>
                                         <div className="flex items-center gap-0.5">
                                             <Button type="text" size="small" disabled={!connected || !skill.enabled || Boolean(busySkill)} icon={selected ? <Check className="size-3.5" /> : <Sparkles className="size-3.5" />} onClick={() => useSkill(skill)}>{t(selected ? "agent.skillManager.selected" : "agent.skillManager.use")}</Button>
-                                            {skill.managed ? (
+                                            {skill.managed && !promptCenterManaged ? (
                                                 <>
                                                     <Tooltip title={t("common.edit")}><Button type="text" shape="circle" size="small" aria-label={t("agent.skillManager.editNamed", { name: skill.interface?.displayName || skill.name })} disabled={!connected || Boolean(busySkill) || Boolean(generatingSource)} icon={<FilePenLine className="size-3.5" />} onClick={() => void openEdit(skill)} /></Tooltip>
                                                     <Tooltip title={t("common.delete")}><Button danger type="text" shape="circle" size="small" aria-label={t("agent.skillManager.deleteNamed", { name: skill.interface?.displayName || skill.name })} disabled={!connected || Boolean(busySkill) || Boolean(generatingSource)} icon={<Trash2 className="size-3.5" />} onClick={() => confirmDelete(skill)} /></Tooltip>

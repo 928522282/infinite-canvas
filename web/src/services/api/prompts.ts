@@ -2,6 +2,7 @@ import localforage from "localforage";
 
 import { runPromptSource, type RawPrompt } from "./prompt-source-runtime";
 import { usePromptSourceStore } from "@/stores/use-prompt-source-store";
+import { promptOverrideKey, usePromptEditorStore } from "@/stores/use-prompt-editor-store";
 import i18n from "@/i18n";
 import type { PromptSource } from "./prompt-source-presets";
 
@@ -90,6 +91,14 @@ function withSourceMeta(source: PromptSource, items: RawPrompt[]): Prompt[] {
     }));
 }
 
+function applyPromptOverrides(items: Prompt[]) {
+    const overrides = usePromptEditorStore.getState().overrides;
+    return items.map((item) => {
+        const override = overrides[promptOverrideKey(item.sourceId, item.id)];
+        return override ? { ...item, ...override, id: item.id, sourceId: item.sourceId, category: item.category, githubUrl: item.githubUrl } : item;
+    });
+}
+
 async function readSourceCache(sourceId: string) {
     return promptCacheStore.getItem<SourceCache>(cacheKey(sourceId));
 }
@@ -129,8 +138,13 @@ function getOrStartRefresh(source: PromptSource) {
 async function getSourcePrompts(source: PromptSource): Promise<Prompt[]> {
     const cached = await readSourceCache(source.id);
     if (cached) {
-        const stale = cached.signature !== sourceSignature(source) || Date.now() - cached.fetchedAt >= cacheTtlMs;
-        if (stale) void getOrStartRefresh(source).catch(() => undefined);
+        const signatureChanged = cached.signature !== sourceSignature(source);
+        if (signatureChanged) {
+            const result = await getOrStartRefresh(source);
+            if (result.success) return (await readSourceCache(source.id))?.items || [];
+        } else if (Date.now() - cached.fetchedAt >= cacheTtlMs) {
+            void getOrStartRefresh(source).catch(() => undefined);
+        }
         return withSourceMeta(source, cached.items);
     }
     const result = await getOrStartRefresh(source);
@@ -148,7 +162,7 @@ async function getAllPrompts(): Promise<Prompt[]> {
             }
         }),
     );
-    return settled.flat();
+    return applyPromptOverrides(settled.flat());
 }
 
 export async function fetchPrompts({ keyword = "", tag = [], category = ALL_PROMPTS_OPTION, page = 1, pageSize = 20 }: { keyword?: string; tag?: string[]; category?: string; page?: number; pageSize?: number } = {}) {
@@ -169,6 +183,12 @@ export async function fetchPrompts({ keyword = "", tag = [], category = ALL_PROM
 }
 
 export async function fetchSourcePrompts(sourceId: string): Promise<Prompt[]> {
+    const source = usePromptSourceStore.getState().sources.find((item) => item.id === sourceId);
+    if (!source) throw new Error(i18n.t("prompts.sourceMissing"));
+    return applyPromptOverrides(await getSourcePrompts(source));
+}
+
+export async function fetchOriginalSourcePrompts(sourceId: string): Promise<Prompt[]> {
     const source = usePromptSourceStore.getState().sources.find((item) => item.id === sourceId);
     if (!source) throw new Error(i18n.t("prompts.sourceMissing"));
     return getSourcePrompts(source);

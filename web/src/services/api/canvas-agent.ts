@@ -99,6 +99,10 @@ export function createCodexSkill(endpoint: string, token: string, input: AgentSk
     return fetchAgentJson<AgentSkillResponse>(endpoint, token, "/agent/codex/skills", jsonPost(input));
 }
 
+export function importCodexSkill(endpoint: string, token: string, skill: Pick<AgentSkillSummary, "name" | "path">) {
+    return fetchAgentJson<AgentSkillResponse>(endpoint, token, `/agent/codex/skills/${encodeURIComponent(skill.name)}/import`, jsonPost(skill));
+}
+
 export function createCodexSkillDraft(endpoint: string, token: string, input: AgentSkillDraftInput) {
     return fetchAgentJson<AgentSkillDraftResponse>(endpoint, token, "/agent/codex/skills/draft", jsonPost(input));
 }

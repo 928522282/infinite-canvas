@@ -40,6 +40,26 @@ test("创建、读取和更新画布专属 Skill", async (context) => {
     assert.deepEqual(updated.interface, { displayName: "产品九宫格生成" });
 });
 
+test("导入现有 Skill 时保留配套资源", async (context) => {
+    const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "canvas-skill-store-"));
+    const source = await fs.mkdtemp(path.join(os.tmpdir(), "canvas-skill-source-"));
+    context.after(() => Promise.all([fs.rm(workspace, { recursive: true, force: true }), fs.rm(source, { recursive: true, force: true })]));
+    await fs.mkdir(path.join(source, "scripts"));
+    await fs.mkdir(path.join(source, "references"));
+    await fs.mkdir(path.join(source, "agents"));
+    await fs.writeFile(path.join(source, "SKILL.md"), "---\nname: audit-assets\ndescription: 审核人物资产\n---\n执行人物资产审核。\n", "utf8");
+    await fs.writeFile(path.join(source, "scripts", "validate.py"), "print('ok')\n", "utf8");
+    await fs.writeFile(path.join(source, "references", "schema.md"), "# Schema\n", "utf8");
+    await fs.writeFile(path.join(source, "agents", "openai.yaml"), "interface:\n  display_name: 人物资产审核\n  short_description: 旧版短说明\n  default_prompt: Use $audit-assets to audit character assets.\n", "utf8");
+
+    const imported = await new SkillStore(workspace).import("audit-assets", path.join(source, "SKILL.md"));
+    assert.equal(imported.managed, true);
+    assert.deepEqual(imported.interface, { displayName: "人物资产审核", defaultPrompt: "Use $audit-assets to audit character assets." });
+    assert.equal(await fs.readFile(path.join(path.dirname(imported.path), "scripts", "validate.py"), "utf8"), "print('ok')\n");
+    assert.equal(await fs.readFile(path.join(path.dirname(imported.path), "references", "schema.md"), "utf8"), "# Schema\n");
+    assert.match(await fs.readFile(path.join(path.dirname(imported.path), "agents", "openai.yaml"), "utf8"), /short_description: 旧版短说明/);
+});
+
 test("revision 不匹配时拒绝覆盖或删除", async (context) => {
     const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "canvas-skill-store-"));
     context.after(() => fs.rm(workspace, { recursive: true, force: true }));

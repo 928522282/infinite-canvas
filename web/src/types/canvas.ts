@@ -44,6 +44,15 @@ export type CanvasNodeText = {
     content: string;
 };
 
+export type CanvasEmbeddedSkill = {
+    id: string;
+    sourceId: string;
+    title: string;
+    description: string;
+    instructions: string;
+    updatedAt: string;
+};
+
 export type CanvasNodeMetadata = {
     content?: string;
     composerContent?: string;
@@ -81,6 +90,33 @@ export type CanvasNodeMetadata = {
     bytes?: number;
     durationMs?: number;
     groupId?: string;
+    workflowId?: string;
+    workflowRole?: "input" | "skill" | "index" | "scene" | "vid" | "step-output" | "output";
+    workflowStep?: number;
+    workflowSkill?: string;
+    workflowFollowupSkill?: string;
+    workflowOutput?: "text" | "image";
+    workflowExecutor?: "embedded";
+    workflowGenerationMode?: "canvas-native";
+    workflowEmbeddedSkill?: CanvasEmbeddedSkill;
+    workflowSceneId?: string;
+    workflowSourceNodeId?: string;
+    workflowSourceVidId?: string;
+    workflowBranchStatus?: "pending" | "running" | "success" | "blocked" | "error";
+    workflowFrameId?: string;
+    workflowFrameOrder?: number;
+    workflowPreviousConfirmedNodeId?: string;
+    workflowIdentityReferenceNodeIds?: string[];
+    workflowAuthoritativeAssetNodeIds?: string[];
+    workflowFrameStatus?: "pending" | "generated" | "confirmed" | "blocked";
+    workflowConsistencyStatus?: "pending" | "pass" | "blocked";
+    workflowConsistencyReportNodeId?: string;
+    workflowArtifactType?: "character-asset" | "scene-asset" | "keyframe-image" | "keyframe-prompt" | "video-prompt";
+    workflowAssetId?: string;
+    assetId?: string;
+    sceneAssetId?: string;
+    referenceAssetIds?: string[];
+    referenceNodeIds?: string[];
     interactive?: boolean; // Plugin node interaction/move state; see CanvasNodeDefinition.interactionToggle.
 };
 
