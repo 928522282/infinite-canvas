@@ -24,7 +24,7 @@ export const DEFAULT_PROMPT_SOURCES: PromptSource[] = [
     createPromptSource({
         id: "short-drama-workflow",
         name: "短剧工作流",
-        url: "/prompts/short-drama-workflow.json?v=11",
+        url: "/prompts/short-drama-workflow.json?v=12",
         enabled: true,
         builtIn: true,
     }),

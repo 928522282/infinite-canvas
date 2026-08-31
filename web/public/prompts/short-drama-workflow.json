@@ -130,7 +130,7 @@
     "title": "Seedance 2.5 提示词优化器",
     "promptUrl": "/prompts/skills/sd25-pe/SKILL.md",
     "description": "把文字、故事和多模态参考编译为可直接提交给 Seedance 2.5 的干净视频 Prompt，覆盖生成、关键帧、分镜、编辑、声音与延长任务。",
-    "coverUrl": "",
+    "coverUrl": "/prompts/covers/seedance-2-5-prompt-optimizer-realistic.png",
     "referenceImageUrls": [],
     "tags": [
       "Seedance 2.5",
