@@ -1,10 +1,11 @@
 import { Fragment } from "react";
 import { App, Button, Input, Tooltip } from "antd";
 import copyToClipboard from "copy-to-clipboard";
-import { Copy, KeyRound, Link2, PlugZap } from "lucide-react";
+import { Copy, Download, KeyRound, Link2, PlugZap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { canvasThemes } from "@/lib/canvas-theme";
+import { CONNECTOR_DOWNLOAD_URL } from "@/constant/env";
 
 const AGENT_PLUGIN_REMOVE_COMMAND = "codex plugin remove infinite-canvas";
 const AGENT_MCP_REMOVE_COMMAND = "codex mcp remove infinite-canvas";
@@ -34,7 +35,11 @@ export function AgentConnectView({
 }) {
     const { t } = useTranslation();
     const { message } = App.useApp();
-    const steps = [{ title: t("agent.connect.pluginTitle"), text: t("agent.connect.pluginText") }, { title: t("agent.connect.directTitle"), text: t("agent.connect.directText"), command: "npx -y @basketikun/canvas-agent" }];
+    const steps = [
+        { title: t("agent.connect.connectorTitle"), text: t("agent.connect.connectorText"), download: true },
+        { title: t("agent.connect.pluginTitle"), text: t("agent.connect.pluginText"), reminder: true },
+        { title: t("agent.connect.directTitle"), text: t("agent.connect.directText"), command: "npx -y @basketikun/canvas-agent --open" },
+    ];
     const statusText = connectError ? t("agent.status.failed") : connected ? activity : enabled ? t("agent.status.connecting") : t("agent.status.disconnected");
     const statusColor = connectError ? "#dc2626" : connected ? "#16a34a" : enabled ? "#d97706" : theme.node.muted;
     const copyCommand = (command: string) => {
@@ -75,7 +80,7 @@ export function AgentConnectView({
                     </div>
                 </div>
                 <div className="space-y-2">
-                    {steps.map((step, index) => {
+                    {steps.map((step) => {
                         const command = "command" in step ? step.command : "";
                         return (
                             <Fragment key={step.title}>
@@ -92,8 +97,13 @@ export function AgentConnectView({
                                             </Tooltip>
                                         </div>
                                     ) : null}
+                                    {"download" in step && step.download ? (
+                                        <Button className="mt-2 !px-2" type="text" icon={<Download className="size-4" />} href={CONNECTOR_DOWNLOAD_URL}>
+                                            {t("agent.connect.downloadConnector")}
+                                        </Button>
+                                    ) : null}
                                 </div>
-                                {index === 0 ? codexPluginReminder : null}
+                                {"reminder" in step && step.reminder ? codexPluginReminder : null}
                             </Fragment>
                         );
                     })}

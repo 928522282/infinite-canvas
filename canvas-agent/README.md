@@ -8,6 +8,14 @@
 npx -y @basketikun/canvas-agent
 ```
 
+直接启动并打开在线画布：
+
+```bash
+npx -y @basketikun/canvas-agent --open
+```
+
+自托管站点可以通过 `--site https://canvas.example/` 指定地址。连接信息只放在 URL Fragment 中，网页读取后会立即从地址栏清除。
+
 需要排查连接、线程、Codex app-server 或工具调用问题时，可开启 Debug 模式：
 
 ```bash
@@ -43,6 +51,8 @@ Canvas Agent 默认只监听 `127.0.0.1`。网页第一次带正确 token 连接
 `canvas-agent` 使用自己的 `package.json` 版本号，不跟仓库根目录 `VERSION` 绑定。推送到 `main` 后，GitHub Actions 会检查 npm 上是否已经存在当前包版本；不存在时才发布 `@basketikun/canvas-agent`。
 
 发布前需要在 GitHub 仓库 Secrets 中配置 `NPM_TOKEN`。
+
+面向非技术用户的 Windows 安装器由 `.github/workflows/windows-connector.yml` 在版本标签上构建。安装器自带 Node.js 和 Canvas Agent，不要求用户安装 npm；生产站点地址由仓库变量 `CANVAS_SITE_URL` 注入。
 
 ## Codex MCP
 

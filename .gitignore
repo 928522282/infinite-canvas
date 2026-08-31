@@ -13,6 +13,9 @@ web/.wrangler/
 
 **/dist
 web/public/plugins
+
+connector/windows/staging/
+connector/windows/output/
 plugins/canvas/*/dist
 plugins/canvas/*/node_modules
 web/public/plugins

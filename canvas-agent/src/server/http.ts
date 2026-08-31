@@ -15,7 +15,7 @@ import { checkVersions } from "../version-check.js";
 import { SkillStore, SkillStoreError } from "../skills/store.js";
 
 /** 启动仅监听本机的 Canvas Agent HTTP 服务。 */
-export function startHttpServer() {
+export function startHttpServer(options: { onListening?: (config: CanvasAgentConfig) => void } = {}) {
     const config = loadConfig(true);
     const port = Number(process.env.PORT) || Number(new URL(config.url).port) || DEFAULT_PORT;
     config.url = `http://127.0.0.1:${port}`;
@@ -128,6 +128,10 @@ export function startHttpServer() {
     });
     app.get("/events", (req, res) => {
         session.openEvents(requestUrl(req, config), res, ensureSiteWorkspace(config).activeThreadId || "");
+    });
+    app.post("/connector/stop", (_req, res) => {
+        res.on("finish", () => setImmediate(() => process.exit(0)));
+        res.json({ ok: true });
     });
     app.post("/canvas/state", (req, res) => {
         session.updateState(req.body, String(req.query.clientId || "") || undefined);
@@ -452,6 +456,7 @@ export function startHttpServer() {
         console.log("Remove manually added MCP: codex mcp remove infinite-canvas");
         if (logger.enabled) console.log(`Debug log: ${logger.filePath}`);
         logger.info("Canvas Agent started", { url: config.url, workspace: ensureSiteWorkspace(config).workspacePath, debugLog: logger.filePath });
+        options.onListening?.(config);
         const activeThreadId = initialWorkspace.activeThreadId || "";
         if (activeThreadId && session.beginCodexMutation()) {
             void prepareExistingThread(activeThreadId).catch(async (error) => {
