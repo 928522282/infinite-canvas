@@ -11,25 +11,25 @@ test("prompt sources contain the bundled short-drama workflow and pre-v3 persist
     const store = readSource("src/stores/use-prompt-source-store.ts");
     const prompts = JSON.parse(readSource("public/prompts/short-drama-workflow.json"));
 
-    assert.match(presets, /url:\s*["']\/prompts\/short-drama-workflow\.json\?v=10["']/);
+    assert.match(presets, /url:\s*["']\/prompts\/short-drama-workflow\.json\?v=13["']/);
     assert.doesNotMatch(presets, /raw\.githubusercontent\.com/);
     assert.deepEqual(prompts.map((item) => item.id), [
         "convert-script-to-ai-video",
         "script-character-asset-audit",
-        "generate-keyframe-prompts",
         "generate-keyframe-prompts-strict-asset-binding",
         "first-frame-shot-reference-prompts",
         "micro-expression-video-generator",
         "optimized-video-shot-prompt-compiler",
+        "sd25-pe",
     ]);
     assert.deepEqual(prompts.map((item) => item.coverUrl), [
         "/prompts/covers/ai-script-conversion-realistic.png",
         "/prompts/covers/script-character-asset-audit-realistic-v2.png",
-        "/prompts/covers/keyframe-prompts-realistic.png",
         "/prompts/covers/keyframe-prompts-strict-asset-binding-realistic.png",
         "/prompts/covers/first-frame-shot-reference-realistic.png",
         "/prompts/covers/micro-expression-performance-realistic.png",
         "/prompts/covers/optimized-video-shot-compiler-realistic.png",
+        "/prompts/covers/seedance-2-5-prompt-optimizer-realistic.png",
     ]);
     const microExpression = prompts.find((item) => item.id === "micro-expression-video-generator");
     const strictAssetBinding = prompts.find((item) => item.id === "generate-keyframe-prompts-strict-asset-binding");

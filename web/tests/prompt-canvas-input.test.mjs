@@ -54,7 +54,8 @@ test("Prompt Center persists and inserts a user-arranged Skill workflow", () => 
     assert.match(promptsPage, /movePrompt\(id, 1\)/);
     assert.match(promptWorkflowStore, /createJSONStorage\(\(\) => localForageStorage\)/);
     assert.match(promptWorkflowStore, /orderedPromptIds:\s*DEFAULT_PROMPT_WORKFLOW_IDS/);
-    assert.match(promptWorkflowStore, /"convert-script-to-ai-video",\s*"script-character-asset-audit",\s*"generate-keyframe-prompts"/);
+    assert.match(promptWorkflowStore, /"convert-script-to-ai-video",\s*"script-character-asset-audit",\s*"generate-keyframe-prompts-strict-asset-binding"/);
+    assert.match(promptWorkflowStore, /LEGACY_KEYFRAME_SKILL_ID[\s\S]*STRICT_KEYFRAME_SKILL_ID/);
     assert.match(promptWorkflowStore, /"first-frame-shot-reference-prompts",\s*"micro-expression-video-generator",\s*"optimized-video-shot-prompt-compiler"/);
     assert.match(promptWorkflowStore, /removePrompt:[\s\S]*filter/);
     assert.match(shortDramaWorkflow, /orderedPromptIds\.map/);

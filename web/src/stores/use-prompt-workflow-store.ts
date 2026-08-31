@@ -6,11 +6,14 @@ import { localForageStorage } from "@/lib/localforage-storage";
 export const DEFAULT_PROMPT_WORKFLOW_IDS = [
     "convert-script-to-ai-video",
     "script-character-asset-audit",
-    "generate-keyframe-prompts",
+    "generate-keyframe-prompts-strict-asset-binding",
     "first-frame-shot-reference-prompts",
     "micro-expression-video-generator",
     "optimized-video-shot-prompt-compiler",
 ];
+
+const LEGACY_KEYFRAME_SKILL_ID = "generate-keyframe-prompts";
+const STRICT_KEYFRAME_SKILL_ID = "generate-keyframe-prompts-strict-asset-binding";
 
 type PromptWorkflowStore = {
     orderedPromptIds: string[];
@@ -39,8 +42,17 @@ export const usePromptWorkflowStore = create<PromptWorkflowStore>()(
         }),
         {
             name: "infinite-canvas:prompt_workflow_store",
+            version: 1,
             storage: createJSONStorage(() => localForageStorage),
             partialize: (state) => ({ orderedPromptIds: state.orderedPromptIds }),
+            migrate: (persisted) => {
+                const state = (persisted || {}) as Partial<PromptWorkflowStore>;
+                const orderedPromptIds = Array.isArray(state.orderedPromptIds) ? state.orderedPromptIds : DEFAULT_PROMPT_WORKFLOW_IDS;
+                return {
+                    ...state,
+                    orderedPromptIds: [...new Set(orderedPromptIds.map((id) => (id === LEGACY_KEYFRAME_SKILL_ID ? STRICT_KEYFRAME_SKILL_ID : id)))],
+                };
+            },
         },
     ),
 );

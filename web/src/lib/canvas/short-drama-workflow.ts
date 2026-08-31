@@ -9,7 +9,7 @@ export const SHORT_DRAMA_WORKFLOW_SOURCE_ID = "short-drama-workflow";
 
 const WORKFLOW_ID = "short-drama-skill-sequence";
 const NODE_GAP = 88;
-const IMAGE_PROMPT_SKILLS = new Set(["generate-keyframe-prompts", "generate-keyframe-prompts-strict-asset-binding", "first-frame-shot-reference-prompts"]);
+const IMAGE_PROMPT_SKILLS = new Set(["generate-keyframe-prompts-strict-asset-binding", "first-frame-shot-reference-prompts"]);
 const CONCISE_IMAGE_NEGATIVE = "不改变人物身份、脸、发型与已确认服装；不增删人物；不出现明显手部错误、字幕或水印。";
 
 export function createShortDramaWorkflow(project: CanvasProject, prompts: Prompt[], orderedPromptIds: string[]) {
