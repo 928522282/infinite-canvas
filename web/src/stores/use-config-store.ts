@@ -66,6 +66,23 @@ export const CONFIG_STORE_KEY = "infinite-canvas:ai_config_store";
 const CHANNEL_MODEL_SEPARATOR = "::";
 const OPENAI_BASE_URL = "https://api.openai.com";
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com";
+const DEFAULT_VIDEO_MODELS = [
+    "Alibaba: Wan-2.5",
+    "wan-2.6",
+    "Alibaba: Wan-2.6-Flash",
+    "Alibaba: Wan-2.7",
+    "Bytedance: Seedance-2.0",
+    "Bytedance: Seedance-2.0-Fast",
+    "Bytedance: Seedance-2.0-Normal",
+    "Bytedance: Seedance-2.5",
+    "Google: Veo-3.1",
+    "Kuaishou: Kling-2.5-Turbo",
+    "Kuaishou: Kling-2.6",
+    "Kuaishou: Kling-3.0",
+    "Minimax: Hailuo-02",
+    "Minimax: Hailuo-2.3",
+    "Minimax: Hailuo-2.3-Fast",
+];
 
 export const defaultConfig: AiConfig = {
     channelMode: "local",
@@ -81,7 +98,7 @@ export const defaultConfig: AiConfig = {
             apiFormat: "openai",
             models: [
                 { name: "gpt-image-2", capability: "image" },
-                { name: "grok-imagine-video", capability: "video" },
+                ...DEFAULT_VIDEO_MODELS.map((name) => ({ name, capability: "video" as const })),
                 { name: "gpt-5.5", capability: "text" },
                 { name: "gpt-4o-mini-tts", capability: "audio" },
             ],
@@ -89,7 +106,7 @@ export const defaultConfig: AiConfig = {
     ],
     model: "default::gpt-image-2",
     imageModel: "default::gpt-image-2",
-    videoModel: "default::grok-imagine-video",
+    videoModel: "default::wan-2.6",
     textModel: "default::gpt-5.5",
     audioModel: "default::gpt-4o-mini-tts",
     audioVoice: "alloy",
@@ -102,7 +119,7 @@ export const defaultConfig: AiConfig = {
     videoWatermark: "false",
     systemPrompt: "",
     reasoningEffort: "auto",
-    models: ["default::gpt-image-2", "default::grok-imagine-video", "default::gpt-5.5", "default::gpt-4o-mini-tts"],
+    models: ["default::gpt-image-2", ...DEFAULT_VIDEO_MODELS.map((name) => `default::${name}`), "default::gpt-5.5", "default::gpt-4o-mini-tts"],
     quality: "auto",
     size: "1:1",
     background: "",
@@ -163,6 +180,7 @@ export function modelCapabilityOf(config: AiConfig, value: string): ModelCapabil
 
 export function modelMatchesCapability(config: AiConfig, value: string, capability?: ModelCapability) {
     if (!capability) return true;
+    if (capability === "video" && isExcludedVideoModel(modelOptionName(value))) return false;
     return modelCapabilityOf(config, value) === capability;
 }
 
@@ -176,7 +194,7 @@ export function resolveModelForCapability(config: AiConfig, currentModel: string
 
 export function selectableModelsByCapability(config: AiConfig, capability?: ModelCapability) {
     if (!capability) return config.models;
-    return config.channels.flatMap((channel) => channel.models.filter((model) => model.capability === capability).map((model) => encodeChannelModel(channel.id, model.name)));
+    return config.channels.flatMap((channel) => channel.models.filter((model) => model.capability === capability && !(capability === "video" && isExcludedVideoModel(model.name))).map((model) => encodeChannelModel(channel.id, model.name)));
 }
 
 /** The user script (if any) attached to a model; empty string means use the system default call. */
@@ -370,7 +388,16 @@ function normalizeChannels(config: AiConfig) {
             }),
         );
     }
+    const defaultChannel = channels.find((channel) => channel.id === "default");
+    if (defaultChannel) {
+        const existing = defaultChannel.models.filter((model) => !isExcludedVideoModel(model.name));
+        defaultChannel.models = normalizeChannelModels([...existing, ...DEFAULT_VIDEO_MODELS.map((name) => ({ name, capability: "video" as const }))]);
+    }
     return channels;
+}
+
+function isExcludedVideoModel(name: string) {
+    return ["wan-3.0", "alibaba: wan-3.0"].includes(name.trim().toLowerCase());
 }
 
 export function defaultBaseUrlForApiFormat(apiFormat: ApiCallFormat) {

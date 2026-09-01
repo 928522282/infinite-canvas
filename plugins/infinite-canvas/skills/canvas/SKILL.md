@@ -7,6 +7,10 @@ description: 操作 Infinite Canvas 当前网页画布，读取节点、选区�
 
 你正在帮助用户操作 Infinite Canvas 网页画布。需要理解或改动画布时，优先使用已配置的 `infinite-canvas` MCP 工具；不要让用户手动复制 JSON、URL 或 token。
 
+## 操作教程
+
+首次在一个新任务中操作画布，或任务涉及多节点工作流、生成、失败恢复、短剧分支与溯源时，先完整阅读 [Codex 画布操作教程](references/codex-operation-guide.md)。工具当前返回的节点、参数和状态是事实来源；教程中的示例不能替代实际读取画布。
+
 ## 工作流
 
 - 如果用户还没有打开或连接网页画布，使用 `open-canvas` 技能打开 Infinite Canvas，不要要求用户手动复制 URL 或 token。

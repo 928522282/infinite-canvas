@@ -1,14 +1,14 @@
 {
   "name": "infinite-canvas",
-  "version": "0.1.0",
+  "version": "0.18.0",
   "description": "Use Codex to read and operate Infinite Canvas through the local Canvas Agent MCP server.",
   "author": {
     "name": "basketikun",
     "url": "https://canvas.best/"
   },
   "homepage": "https://canvas.best/",
-  "repository": "https://github.com/basketikun/infinite-canvas",
-  "license": "AGPL-3.0",
+  "repository": "https://github.com/928522282/infinite-canvas",
+  "license": "MIT",
   "keywords": ["infinite-canvas", "canvas", "mcp", "agent"],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",

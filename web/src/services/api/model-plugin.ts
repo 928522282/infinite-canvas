@@ -250,18 +250,45 @@ return (data.candidates || [])
         {
             label: i18n.t("modelPlugin.templates.openai"),
             script: `// ${i18n.t("modelPlugin.templates.videoOpenai")}
-const headers = { "Content-Type": "application/json", Authorization: \`Bearer \${apiKey}\` };
+const form = new FormData();
+form.set("model", model);
+form.set("prompt", prompt);
+form.set("duration", String(params.seconds));
+if (params.ratio && params.ratio !== "auto") form.set("aspect_ratio", params.ratio);
+if (params.resolution) form.set("quality", params.resolution);
+form.set("generate_audio", String(params.generateAudio));
+form.set("watermark", String(params.watermark));
+for (const dataUrl of images) {
+  form.append("reference_image_urls", await (await fetch(dataUrl)).blob(), "reference.png");
+}
+const headers = { Authorization: \`Bearer \${apiKey}\` };
 const task = await request({
   method: "post",
-  url: \`\${baseUrl}/v1/videos\`,
+  url: \`\${baseUrl}/v1/videos/generations\`,
   headers,
-  data: { model, prompt, seconds: params.seconds },
+  data: form,
 });
-return await poll(
-  () => request({ method: "get", url: \`\${baseUrl}/v1/videos/\${task.id}\`, headers }),
-  (state) => state.status === "completed" ? { url: state.video_url || state.url } : null,
-  { intervalMs: 2500, timeoutMs: 300000 },
-);`,
+const taskId = task.id || task.data?.id || task.task_id || task.data?.task_id;
+if (!taskId) throw new Error(${JSON.stringify(i18n.t("apiErrors.noVideoTaskId"))});
+const completed = await poll(
+  () => request({ method: "get", url: \`\${baseUrl}/v1/videos/\${taskId}\`, headers }),
+  (response) => {
+    const state = response.data || response;
+    if (["failed", "error", "cancelled", "canceled", "expired"].includes(state.status)) {
+      throw new Error(state.error?.message || state.error || state.message || ${JSON.stringify(i18n.t("apiErrors.videoGenerationFailed"))});
+    }
+    return ["completed", "complete", "succeeded", "success", "ready"].includes(state.status) ? state : null;
+  },
+  { intervalMs: 10000, timeoutMs: 900000 },
+);
+const videoUrl = completed.video_url || completed.output_url || completed.result_url || completed.url;
+if (videoUrl) return { url: videoUrl };
+return await request({
+  method: "get",
+  url: \`\${baseUrl}/v1/videos/\${taskId}/content\`,
+  headers,
+  responseType: "blob",
+});`,
         },
         {
             label: i18n.t("modelPlugin.templates.gemini"),

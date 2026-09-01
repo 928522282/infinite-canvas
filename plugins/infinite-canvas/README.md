@@ -4,25 +4,23 @@
 
 ## 安装
 
-macOS / Linux：
+直接从 GitHub 安装发布版：
 
 ```bash
-git clone https://github.com/basketikun/infinite-canvas.git
-cd infinite-canvas
-codex plugin marketplace add "$(pwd)"
+codex plugin marketplace add 928522282/infinite-canvas --ref v0.18.0
 codex plugin add infinite-canvas@infinite-canvas-local
 ```
 
-Windows PowerShell：
+如需检出源码：
 
-```powershell
-git clone https://github.com/basketikun/infinite-canvas.git
+```bash
+git clone --branch v0.18.0 https://github.com/928522282/infinite-canvas.git
 cd infinite-canvas
-codex plugin marketplace add "$PWD"
+codex plugin marketplace add .
 codex plugin add infinite-canvas@infinite-canvas-local
 ```
 
-Windows CMD 将 `$PWD` 替换为 `%cd%`。
+仓库和插件不包含 API Key。画布中配置的服务密钥只保存在用户自己的浏览器本地，不随插件发布或同步。
 
 安装后新建一个 Codex 任务，然后输入：
 

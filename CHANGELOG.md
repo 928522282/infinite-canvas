@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.18.0 - 2026-09-01
+
++ [修复] 画布视频生成切换到 SilkDock `/videos/generations` 协议，默认使用 `wan-2.6`，提供除 Wan-3.0 外的 15 个视频模型，只保留 720p/480p，增加 15 秒时长选项，并按素材顺序重复上传多张语义参考图。
++ [新增] Infinite Canvas Codex 插件内嵌完整画布操作教程，统一节点定位、原生生成、异步状态、失败重试、内嵌 Skill 与逐 VID 短剧溯源规则。
 + [新增] 提示词中心加入完整的 `Seedance 2.5 Prompt Optimizer` Skill，并支持从独立 Markdown 资源加载超长 Skill 正文，保证编辑、复制和输入画布时不截断。
 + [新增] 提供“在线网站 + Windows 本地连接器”分发模式，连接器内置独立 Node.js 与 Canvas Agent 运行环境，可从开始菜单后台启动、停止并通过 URL Fragment 安全连接在线画布。
 
