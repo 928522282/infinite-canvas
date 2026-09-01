@@ -7,7 +7,7 @@ import { logger } from "./utils/logger.js";
 
 const require = createRequire(import.meta.url);
 const execFileAsync = promisify(execFile);
-const CODEX_VERSION = String((require("@openai/codex/package.json") as { version: string }).version);
+const CODEX_VERSION = bundledCodexVersion();
 
 /** 输出当前版本，并在后台检查 npm 最新版本。 */
 export function checkVersions() {
@@ -17,7 +17,7 @@ export function checkVersions() {
     logger.info("Local Codex version", { version: localCodexVersion || "not found" });
     if (!localCodexVersion) {
         logger.warn("Local Codex was not found. Install the latest version with: npm install -g @openai/codex@latest");
-    } else if (localCodexVersion !== CODEX_VERSION) {
+    } else if (CODEX_VERSION && localCodexVersion !== CODEX_VERSION) {
         logger.warn(`Bundled Codex ${CODEX_VERSION} does not match local Codex ${localCodexVersion}. Keep both current with: npm install -g @openai/codex@latest && npx -y @basketikun/canvas-agent@latest`);
     }
     void checkLatestVersions(localCodexVersion);
@@ -31,10 +31,18 @@ async function checkLatestVersions(localCodexVersion: string) {
             npmVersion("@openai/codex"),
         ]);
         if (isOlder(VERSION, latestAgent)) logger.warn(`Update available: Canvas Agent ${VERSION} -> ${latestAgent}. Run: npx -y @basketikun/canvas-agent@latest`);
-        if (isOlder(CODEX_VERSION, latestCodex)) logger.warn(`Update available: bundled Codex ${CODEX_VERSION} -> ${latestCodex}. Upgrade Canvas Agent with: npx -y @basketikun/canvas-agent@latest`);
+        if (CODEX_VERSION && isOlder(CODEX_VERSION, latestCodex)) logger.warn(`Update available: bundled Codex ${CODEX_VERSION} -> ${latestCodex}. Upgrade Canvas Agent with: npx -y @basketikun/canvas-agent@latest`);
         if (localCodexVersion && isOlder(localCodexVersion, latestCodex)) logger.warn(`Update available: local Codex ${localCodexVersion} -> ${latestCodex}. Run: npm install -g @openai/codex@latest`);
     } catch {
         logger.warn("Unable to check the latest npm versions; startup will continue.");
+    }
+}
+
+function bundledCodexVersion() {
+    try {
+        return String((require("@openai/codex/package.json") as { version: string }).version);
+    } catch {
+        return "";
     }
 }
 

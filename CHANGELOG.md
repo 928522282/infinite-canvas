@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.18.1 - 2026-09-01
+
++ [修复] Infinite Canvas Codex 插件内嵌 Canvas Agent MCP 与网页连接服务，在 Windows 任务缺少全局 Node/npm/npx 的情况下改用 Codex 自带 Node 启动，并通过 URL fragment 提供本地画布连接地址。
+
 ## v0.18.0 - 2026-09-01
 
 + [修复] 画布视频生成切换到 SilkDock `/videos/generations` 协议，默认使用 `wan-2.6`，提供除 Wan-3.0 外的 15 个视频模型，只保留 720p/480p，增加 15 秒时长选项，并按素材顺序重复上传多张语义参考图。

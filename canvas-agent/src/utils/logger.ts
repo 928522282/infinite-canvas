@@ -50,6 +50,10 @@ export class Logger {
         if (details === undefined) this.logger.error(message);
         else this.logger.error(message, {details: sanitize(details)});
     }
+
+    setSilent(silent = true) {
+        this.logger.silent = silent;
+    }
 }
 
 /** 将日志详情格式化为紧凑的单行文本。 */

@@ -15,7 +15,8 @@ import { checkVersions } from "../version-check.js";
 import { SkillStore, SkillStoreError } from "../skills/store.js";
 
 /** 启动仅监听本机的 Canvas Agent HTTP 服务。 */
-export function startHttpServer(options: { onListening?: (config: CanvasAgentConfig) => void } = {}) {
+export function startHttpServer(options: { onListening?: (config: CanvasAgentConfig) => void; quiet?: boolean } = {}) {
+    if (options.quiet) logger.setSilent();
     const config = loadConfig(true);
     const port = Number(process.env.PORT) || Number(new URL(config.url).port) || DEFAULT_PORT;
     config.url = `http://127.0.0.1:${port}`;
@@ -447,14 +448,16 @@ export function startHttpServer(options: { onListening?: (config: CanvasAgentCon
     });
 
     app.listen(port, "127.0.0.1", () => {
-        console.log("Infinite Canvas Agent");
-        checkVersions();
-        console.log(`Local URL: ${config.url}`);
-        console.log(`Connect token: ${config.token}`);
-        console.log("Codex MCP is not installed by this command.");
-        console.log("Optional MCP add: codex mcp add infinite-canvas -- npx -y @basketikun/canvas-agent mcp");
-        console.log("Remove manually added MCP: codex mcp remove infinite-canvas");
-        if (logger.enabled) console.log(`Debug log: ${logger.filePath}`);
+        if (!options.quiet) {
+            console.log("Infinite Canvas Agent");
+            checkVersions();
+            console.log(`Local URL: ${config.url}`);
+            console.log(`Connect token: ${config.token}`);
+            console.log("Codex MCP is not installed by this command.");
+            console.log("Optional MCP add: codex mcp add infinite-canvas -- npx -y @basketikun/canvas-agent mcp");
+            console.log("Remove manually added MCP: codex mcp remove infinite-canvas");
+            if (logger.enabled) console.log(`Debug log: ${logger.filePath}`);
+        }
         logger.info("Canvas Agent started", { url: config.url, workspace: ensureSiteWorkspace(config).workspacePath, debugLog: logger.filePath });
         options.onListening?.(config);
         const activeThreadId = initialWorkspace.activeThreadId || "";
