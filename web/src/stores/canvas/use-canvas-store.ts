@@ -135,7 +135,7 @@ export const useCanvasStore = create<CanvasStore>()(
                                 metadata: {
                                     ...metadata,
                                     ...(executable ? { content: skill.instructions, prompt: skill.instructions } : {}),
-                                    workflowExecutor: "embedded",
+                                    workflowExecutor: "embedded" as const,
                                     workflowEmbeddedSkill: skill,
                                 },
                             };

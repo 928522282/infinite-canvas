@@ -49,7 +49,10 @@ export const usePromptSourceStore = create<PromptSourceStore>()(
             partialize: (state) => ({ sources: state.sources, schedule: state.schedule }),
             migrate: (persisted, version) => {
                 const state = (persisted || {}) as Partial<PromptSourceStore>;
-                return version < 3 ? { ...state, sources: [] } : state;
+                return {
+                    sources: version < 3 ? [] : Array.isArray(state.sources) ? state.sources : [],
+                    schedule: { ...defaultSchedule, ...(state.schedule || {}) },
+                };
             },
             merge: (persisted, current) => {
                 const persistedState = (persisted || {}) as Partial<PromptSourceStore>;

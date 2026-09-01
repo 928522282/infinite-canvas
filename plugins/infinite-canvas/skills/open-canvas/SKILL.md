@@ -5,11 +5,11 @@ description: 打开 Infinite Canvas 在线或本地画布，并自动连接本�
 
 # Open Infinite Canvas
 
-默认打开在线版。只有用户明确要求使用本地项目时，才启动本地前端。
+用户说“我的画布”“当前画布”或已有 Infinite Canvas 页面时，必须保持该页面的完整 origin，不得从 `localhost` 切换到在线站点，也不得从在线站点切换到 `localhost`。画布、提示词中心编辑和 AI 配置是按浏览器 origin 隔离的；切换来源会显示另一套本地数据。
 
 ## 在线版
 
-插件 MCP 会自动启动内嵌的本地 Canvas Agent，无需系统安装 Node、npm、npx，也不要再次运行 `npx`。调用 `site_get_connection_url`（默认 `mode=new`），然后在 Codex 右侧浏览器打开返回的 URL；不要把 URL 或 token 发到聊天正文中。
+插件 MCP 会自动启动内嵌的本地 Canvas Agent，无需系统安装 Node、npm、npx，也不要再次运行 `npx`。如果已有 Infinite Canvas 标签页，优先复用该标签页及其 origin；否则调用 `site_get_connection_url`。工具会优先使用 Canvas Agent 已授权的 localhost 来源，只有没有已授权来源时才回退到在线站点。然后在 Codex 右侧浏览器打开返回的 URL；不要把 URL 或 token 发到聊天正文中。
 
 ## 本地版
 

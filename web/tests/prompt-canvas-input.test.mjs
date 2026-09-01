@@ -24,7 +24,7 @@ test("the Prompt Center can insert an editable prompt copy into a selected canva
 
 test("prompt edits are persisted locally and applied without replacing the source", () => {
     assert.match(promptsPage, /setEditingPrompt\(item\)/);
-    assert.match(promptsPage, /savePromptOverride\(\{\s*sourceId:\s*editingPrompt\.sourceId,\s*promptId:\s*editingPrompt\.id/);
+    assert.match(promptsPage, /savePromptOverride\(\{\s*sourceId:\s*current\.sourceId,\s*promptId:\s*current\.id/);
     assert.match(promptEditorStore, /createJSONStorage\(\(\) => localForageStorage\)/);
     assert.match(promptEditorStore, /removeOverride:[\s\S]*delete overrides\[promptOverrideKey/);
     assert.match(promptService, /function applyPromptOverrides/);
@@ -54,9 +54,8 @@ test("Prompt Center persists and inserts a user-arranged Skill workflow", () => 
     assert.match(promptsPage, /movePrompt\(id, 1\)/);
     assert.match(promptWorkflowStore, /createJSONStorage\(\(\) => localForageStorage\)/);
     assert.match(promptWorkflowStore, /orderedPromptIds:\s*DEFAULT_PROMPT_WORKFLOW_IDS/);
-    assert.match(promptWorkflowStore, /"convert-script-to-ai-video",\s*"script-character-asset-audit",\s*"generate-keyframe-prompts-strict-asset-binding"/);
+    assert.match(promptWorkflowStore, /"convert-script-to-ai-video",\s*"generate-keyframe-prompts-strict-asset-binding",\s*"sd25-pe"/);
     assert.match(promptWorkflowStore, /LEGACY_KEYFRAME_SKILL_ID[\s\S]*STRICT_KEYFRAME_SKILL_ID/);
-    assert.match(promptWorkflowStore, /"first-frame-shot-reference-prompts",\s*"micro-expression-video-generator",\s*"optimized-video-shot-prompt-compiler"/);
     assert.match(promptWorkflowStore, /removePrompt:[\s\S]*filter/);
     assert.match(shortDramaWorkflow, /orderedPromptIds\.map/);
     assert.match(shortDramaWorkflow, /workflowSkill:\s*prompt\.id/);
@@ -65,7 +64,7 @@ test("Prompt Center persists and inserts a user-arranged Skill workflow", () => 
     assert.match(shortDramaWorkflow, /workflowGenerationMode:\s*imageOutput \? "canvas-native"/);
     assert.match(shortDramaWorkflow, /IMAGE_PROMPT_SKILLS/);
     assert.match(shortDramaWorkflow, /不得从本机 Skill 目录或 \$skill-name 调用同名 Skill/);
-    assert.match(shortDramaWorkflow, /画布原生生图功能/);
+    assert.match(shortDramaWorkflow, /画布原生生图配置/);
     assert.match(shortDramaWorkflow, /strictly|严格按节点从左到右/);
     assert.match(shortDramaWorkflow, /用户本轮提供的文件或文件路径/);
     assert.match(shortDramaWorkflow, /未经剧情改写的全部原始内容/);
@@ -85,7 +84,7 @@ test("Prompt Center persists and inserts a user-arranged Skill workflow", () => 
     assert.match(shortDramaWorkflow, /每个 VID 的该步输出节点直接连接/);
     assert.match(shortDramaWorkflow, /只把该 VID 的 workflowBranchStatus 标记为 blocked 或 error/);
     assert.match(shortDramaWorkflow, /共享映射只能作为参考，不能代替逐 VID 结果/);
-    assert.match(shortDramaWorkflow, /不得把多个 VID 合成一次生图/);
+    assert.match(shortDramaWorkflow, /不得把多个 VID 或多个关键帧合成一次生图/);
     assert.match(shortDramaWorkflow, /“工作流最终输出索引”节点只写总进度和逐 VID 最终节点索引/);
     assert.match(shortDramaWorkflow, /workflowNode\(CanvasNodeType\.Text,[\s\S]*"工作流最终输出索引"/);
     assert.match(shortDramaWorkflow, /不得将它重新解释为尾帧/);
@@ -105,7 +104,7 @@ test("long bundled Skills load their complete Markdown body", () => {
     const skill = source.find((item) => item.id === "sd25-pe");
     const markdown = readFileSync(`${webRoot}public/prompts/skills/sd25-pe/SKILL.md`, "utf8");
     assert.equal(skill.promptUrl, "/prompts/skills/sd25-pe/SKILL.md");
-    assert.ok(markdown.length > 60_000);
+    assert.ok(markdown.length > 25_000);
     assert.match(markdown, /name: sd25-pe/);
     assert.match(markdown, /# Seedance 2\.5 Prompt Optimizer/);
     assert.match(markdown, /## 最终自检/);

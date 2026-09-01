@@ -71190,16 +71190,20 @@ async function startMcpServer(options2 = {}) {
   const config3 = loadConfig(true);
   const server = new McpServer({ name: "canvas-agent", version: options2.version || VERSION }, { instructions: options2.instructions || AGENT_PROMPT });
   server.registerTool("site_get_connection_url", {
-    description: "\u83B7\u53D6 Infinite Canvas \u7F51\u9875\u8FDE\u63A5\u5730\u5740\u3002\u9996\u6B21\u6253\u5F00\u753B\u5E03\u6216\u7F51\u9875\u672A\u8FDE\u63A5\u65F6\u8C03\u7528\uFF1B\u5730\u5740\u4E2D\u7684\u672C\u5730\u8FDE\u63A5 token \u4F4D\u4E8E URL fragment\uFF0C\u7F51\u9875\u8BFB\u53D6\u540E\u4F1A\u7ACB\u5373\u6E05\u9664\u3002",
+    description: "\u83B7\u53D6 Infinite Canvas \u7F51\u9875\u8FDE\u63A5\u5730\u5740\u3002\u9ED8\u8BA4\u4F18\u5148\u590D\u7528 Canvas Agent \u5DF2\u6388\u6743\u7684 localhost \u6765\u6E90\uFF0C\u4EE5\u4FDD\u7559\u8BE5\u6765\u6E90\u4E2D\u7684\u6D4F\u89C8\u5668\u672C\u5730\u753B\u5E03\u3001\u63D0\u793A\u8BCD\u548C\u914D\u7F6E\uFF1B\u6CA1\u6709\u5DF2\u6388\u6743\u6765\u6E90\u65F6\u624D\u4F7F\u7528\u5728\u7EBF\u7AD9\u70B9\u3002\u5730\u5740\u4E2D\u7684\u672C\u5730\u8FDE\u63A5 token \u4F4D\u4E8E URL fragment\uFF0C\u7F51\u9875\u8BFB\u53D6\u540E\u4F1A\u7ACB\u5373\u6E05\u9664\u3002",
     inputSchema: {
       mode: external_exports.enum(["new", "recent", "choose"]).optional(),
       siteUrl: external_exports.string().url().optional()
     }
-  }, async ({ mode = "new", siteUrl = DEFAULT_CANVAS_SITE_URL }) => ({
-    content: [{ type: "text", text: JSON.stringify({ url: connectorSiteUrl(siteUrl, config3, mode) }) }]
+  }, async ({ mode = "new", siteUrl }) => ({
+    content: [{ type: "text", text: JSON.stringify({ url: connectorSiteUrl(siteUrl || preferredCanvasSite(config3), config3, mode) }) }]
   }));
   toolNames.forEach((name) => registerCanvasTool(server, config3, name));
   await server.connect(new StdioServerTransport());
+}
+function preferredCanvasSite(config3) {
+  const origins = [...config3.origins || []].reverse();
+  return origins.find((origin) => /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/i.test(origin)) || origins[0] || DEFAULT_CANVAS_SITE_URL;
 }
 function registerCanvasTool(server, config3, name) {
   const schema = toolInputSchemas[name];

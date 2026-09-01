@@ -122,7 +122,10 @@ export default function PromptsPage() {
 
     const saveEditedPrompt = async (values: { title: string; description: string; prompt: string; tags: string[] }) => {
         if (!editingPrompt) return;
-        if (!PROMPT_CENTER_SKILL_IDS.has(editingPrompt.id)) return message.error(t("prompts.skillSyncUnsupported"));
+        if (!PROMPT_CENTER_SKILL_IDS.has(editingPrompt.id)) {
+            message.error(t("prompts.skillSyncUnsupported"));
+            return;
+        }
         const current = editingPrompt;
         setPromptSyncing(true);
         try {

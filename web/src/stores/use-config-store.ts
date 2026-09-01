@@ -66,6 +66,7 @@ export const CONFIG_STORE_KEY = "infinite-canvas:ai_config_store";
 const CHANNEL_MODEL_SEPARATOR = "::";
 const OPENAI_BASE_URL = "https://api.openai.com";
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com";
+const SILKDOCK_BASE_URL = "https://silkdock.ai/v1";
 const DEFAULT_VIDEO_MODELS = [
     "Alibaba: Wan-2.5",
     "wan-2.6",
@@ -86,14 +87,14 @@ const DEFAULT_VIDEO_MODELS = [
 
 export const defaultConfig: AiConfig = {
     channelMode: "local",
-    baseUrl: OPENAI_BASE_URL,
+    baseUrl: SILKDOCK_BASE_URL,
     apiKey: "",
     apiFormat: "openai",
     channels: [
         {
             id: "default",
             name: i18n.t("config.channels.defaultName"),
-            baseUrl: OPENAI_BASE_URL,
+            baseUrl: SILKDOCK_BASE_URL,
             apiKey: "",
             apiFormat: "openai",
             models: [

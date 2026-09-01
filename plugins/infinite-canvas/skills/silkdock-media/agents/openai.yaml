@@ -1,0 +1,7 @@
+interface:
+  display_name: "SilkDock Media"
+  short_description: "Direct SilkDock image and video generation"
+  default_prompt: "Use $silkdock-media to send my request directly to SilkDock with gpt-image-2 for images or wan-2.6 for videos, without rewriting the prompt unless I explicitly ask."
+
+policy:
+  allow_implicit_invocation: true

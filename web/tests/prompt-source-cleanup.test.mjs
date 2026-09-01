@@ -39,7 +39,7 @@ test("prompt sources contain the bundled short-drama workflow and pre-v3 persist
     assert.match(microExpression.prompt, /唯一交付物是当前VID可追溯、可计时的微表情表演层/);
     assert.doesNotMatch(microExpression.prompt, /hub_generate_video|自动切换 MiniMax-H3/);
     assert.match(store, /version:\s*4/);
-    assert.match(store, /version\s*<\s*3\s*\?\s*\{\s*\.\.\.state,\s*sources:\s*\[\]\s*\}/);
+    assert.match(store, /sources:\s*version\s*<\s*3\s*\?\s*\[\]\s*:\s*Array\.isArray\(state\.sources\)/);
     assert.match(store, /DEFAULT_PROMPT_SOURCES\.map/);
 });
 

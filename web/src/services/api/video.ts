@@ -3,16 +3,26 @@ import { nanoid } from "nanoid";
 
 import i18n from "@/i18n";
 import { dataUrlToFile } from "@/lib/image-utils";
-import { uploadMediaFile, type UploadedFile } from "@/services/file-storage";
+import { resolveMediaUrl, uploadMediaFile, type UploadedFile } from "@/services/file-storage";
 import { imageToDataUrl } from "@/services/image-storage";
-import { boolConfig, buildApiUrl, modelOptionName, resolveModelRequestConfig, resolveModelScript, type AiConfig } from "@/stores/use-config-store";
+import { boolConfig, buildApiUrl, modelOptionName, resolveModelForCapability, resolveModelRequestConfig, resolveModelScript, type AiConfig } from "@/stores/use-config-store";
 import { runModelPlugin } from "./model-plugin";
 import type { ReferenceImage } from "@/types/image";
+import type { ReferenceAudio, ReferenceVideo } from "@/types/media";
 
 type VideoResponse = { id: string; status?: string; error?: { message?: string }; url?: string; result_url?: string; video_url?: string; content?: { video_url?: string; url?: string } | null };
 type ApiVideoResponse = VideoResponse | { code?: number | string; data?: VideoResponse | null; msg?: string; message?: string; error?: { message?: string } };
 type ApiEnvelope<T> = T | { code?: number | string; data?: T | null; msg?: string; message?: string; error?: { message?: string } };
 type RequestOptions = { signal?: AbortSignal };
+export type VideoGenerationReferences = {
+    images?: ReferenceImage[];
+    videos?: ReferenceVideo[];
+    audios?: ReferenceAudio[];
+    inputReference?: ReferenceImage;
+    firstFrame?: ReferenceImage;
+    lastFrame?: ReferenceImage;
+};
+type VideoReferenceInput = ReferenceImage[] | VideoGenerationReferences;
 const apiText = (key: string, options?: Record<string, unknown>) => i18n.t(`apiErrors.${key}`, options);
 
 export type VideoGenerationResult = { blob?: Blob; url?: string; mimeType?: string };
@@ -33,7 +43,7 @@ function aiHeaders(config: AiConfig, contentType?: string) {
     };
 }
 
-export async function requestVideoGeneration(config: AiConfig, prompt: string, references: ReferenceImage[] = [], options?: RequestOptions): Promise<VideoGenerationResult> {
+export async function requestVideoGeneration(config: AiConfig, prompt: string, references: VideoReferenceInput = [], options?: RequestOptions): Promise<VideoGenerationResult> {
     const task = await createVideoGenerationTask(config, prompt, references, options);
     for (let attempt = 0; attempt < 90; attempt += 1) {
         if (options?.signal?.aborted) throw new DOMException("Aborted", "AbortError");
@@ -46,13 +56,14 @@ export async function requestVideoGeneration(config: AiConfig, prompt: string, r
     throw new Error(apiText("videoTimeout", { provider: "" }));
 }
 
-export async function createVideoGenerationTask(config: AiConfig, prompt: string, references: ReferenceImage[] = [], options?: RequestOptions): Promise<VideoGenerationTask> {
-    const selectedModel = (config.model || config.videoModel).trim();
+export async function createVideoGenerationTask(config: AiConfig, prompt: string, references: VideoReferenceInput = [], options?: RequestOptions): Promise<VideoGenerationTask> {
+    const selectedModel = resolveModelForCapability(config, config.model || config.videoModel, "video").trim();
     const requestConfig = resolveModelRequestConfig(config, selectedModel);
     const script = resolveModelScript(config, selectedModel);
-    if (script) return createPluginVideoTask(requestConfig, selectedModel, script, prompt, references, options);
+    const normalizedReferences = normalizeVideoReferences(references);
+    if (script) return createPluginVideoTask(requestConfig, selectedModel, script, prompt, normalizedReferences.images || [], options);
     assertVideoConfig(requestConfig, requestConfig.model);
-    return createOpenAIVideoTask(requestConfig, selectedModel, prompt, references, options);
+    return createOpenAIVideoTask(requestConfig, selectedModel, prompt, normalizedReferences, options);
 }
 
 export async function pollVideoGenerationTask(config: AiConfig, task: VideoGenerationTask, options?: RequestOptions): Promise<VideoGenerationTaskState> {
@@ -78,7 +89,7 @@ async function createPluginVideoTask(config: AiConfig, model: string, script: st
             images: refs,
             params: {
                 seconds: normalizeVideoSeconds(config.videoSeconds),
-                size: normalizeVideoSize(config.size),
+                size: config.size,
                 resolution: normalizeVideoResolution(config.vquality),
                 ratio: config.size,
                 generateAudio: boolConfig(config.videoGenerateAudio, true),
@@ -116,7 +127,7 @@ export async function storeGeneratedVideo(result: VideoGenerationResult): Promis
     throw new Error(apiText("noPlayableVideo"));
 }
 
-async function createOpenAIVideoTask(config: AiConfig, model: string, prompt: string, references: ReferenceImage[], options?: RequestOptions): Promise<VideoGenerationTask> {
+async function createOpenAIVideoTask(config: AiConfig, model: string, prompt: string, references: VideoGenerationReferences, options?: RequestOptions): Promise<VideoGenerationTask> {
     const body = new FormData();
     body.append("model", modelOptionName(model));
     body.append("prompt", prompt);
@@ -126,8 +137,18 @@ async function createOpenAIVideoTask(config: AiConfig, model: string, prompt: st
     body.append("quality", normalizeVideoResolution(config.vquality));
     body.append("generate_audio", String(boolConfig(config.videoGenerateAudio, true)));
     body.append("watermark", String(boolConfig(config.videoWatermark, false)));
-    const files = await Promise.all(references.map(async (image) => dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) })));
-    files.forEach((file) => body.append("reference_image_urls", file));
+    const images = references.images || [];
+    if (references.inputReference) {
+        body.append("input_reference", await imageReferenceFile(references.inputReference));
+    } else if (images.length === 1 && !references.videos?.length && !references.audios?.length) {
+        body.append("input_reference", await imageReferenceFile(images[0]));
+    } else {
+        for (const image of images) body.append("reference_image_urls", await imageReferenceFile(image));
+    }
+    for (const video of references.videos || []) body.append("reference_video_urls", await mediaReferenceFile(video, "reference.mp4"));
+    for (const audio of references.audios || []) body.append("reference_audio_urls", await mediaReferenceFile(audio, "reference.mp3"));
+    if (references.firstFrame) body.append("first_frame_url", await imageReferenceFile(references.firstFrame));
+    if (references.lastFrame) body.append("last_frame_url", await imageReferenceFile(references.lastFrame));
     try {
         const created = unwrapVideoResponse((await axios.post<ApiVideoResponse>(aiApiUrl(config, "/videos/generations"), body, { headers: aiHeaders(config), signal: options?.signal })).data);
         if (!created.id) throw new Error(apiText("noVideoTaskId"));
@@ -183,6 +204,21 @@ function normalizeVideoAspectRatio(value: string) {
     const match = value.match(/^(\d+)x(\d+)$/);
     if (!match) return null;
     return Number(match[1]) >= Number(match[2]) ? "16:9" : "9:16";
+}
+
+function normalizeVideoReferences(references: VideoReferenceInput): VideoGenerationReferences {
+    return Array.isArray(references) ? { images: references } : references;
+}
+
+async function imageReferenceFile(image: ReferenceImage) {
+    return dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) });
+}
+
+async function mediaReferenceFile(reference: ReferenceVideo | ReferenceAudio, fallbackName: string) {
+    const url = await resolveMediaUrl(reference.storageKey, reference.url);
+    if (!url) throw new Error(apiText(reference.type.startsWith("video/") ? "invalidReferenceVideo" : "invalidReferenceAudio"));
+    const blob = await (await fetch(url)).blob();
+    return new File([blob], reference.name || fallbackName, { type: reference.type || blob.type || "application/octet-stream" });
 }
 
 function normalizeVideoResolution(value: string) {

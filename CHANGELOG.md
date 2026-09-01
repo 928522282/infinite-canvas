@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v0.18.2 - 2026-09-01
+
++ [修复] Codex 插件优先连接已授权的 `localhost` 画布来源，不再把用户的本地画布、资产和提示词中心切换到独立的在线存储空间。
++ [新增] 插件打包提示词中心 7 个短剧 Skill、当前三步工作流快照及最新版 SilkDock 生图/视频 Skill，且不包含 API Key。
++ [调整] 新前端默认渠道改为 SilkDock，视频模型严格回落到 `wan-2.6`，并支持单图输入、多图语义参考、参考视频、参考音频、首帧和尾帧的最新 multipart 字段。
++ [修复] 视频工作台可使用与界面说明一致的 9 张参考图，并继续只提供 720p/480p 与包含 15 秒在内的时长选项。
+
 ## v0.18.1 - 2026-09-01
 
 + [修复] Infinite Canvas Codex 插件内嵌 Canvas Agent MCP 与网页连接服务，在 Windows 任务缺少全局 Node/npm/npx 的情况下改用 Codex 自带 Node 启动，并通过 URL fragment 提供本地画布连接地址。
